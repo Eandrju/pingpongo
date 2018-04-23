@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import time
 
-def magicPerspectiveProjector(points, distanceFromPlane = 10):  # points -> ndarray with shape [x, 3]
+def magicPerspectiveProjector(points, distanceFromPlane = 200):  # points -> ndarray with shape [x, 3]
     try:
         pointsPrim = points * distanceFromPlane / points[:, 2]
     except ValueError:
@@ -142,8 +142,8 @@ class Ball(QtWidgets.QGraphicsItem):
     def __init__(self, windowSize, radius, scene, color=QtCore.Qt.yellow):
         super().__init__()
         self.origin = windowSize/2
-        self.velocityVector = np.array([-0., .0, .15])
-        self.position = np.array([5, 5, 20])
+        self.velocityVector = np.array([-1., 2.0, 1.15])
+        self.position = np.array([5, 5, 280])
         self.radius = radius
         self.color = color
         self.nodes = None
@@ -210,8 +210,8 @@ class Scene(QtWidgets.QGraphicsScene):
     def __init__(self,size):
         super().__init__()
         self.scenesize = size
-        self.startDistance = 11
-        self.endDistance = 35
+        self.startDistance = 220
+        self.endDistance = 700
         self.perspectiveRects = []
         self.windowSize = np.array([1000,700])
         self.origin = self.windowSize/2
@@ -239,15 +239,24 @@ class Scene(QtWidgets.QGraphicsScene):
 
     def checkCollision(self):
         rad = self.ball.radius
+        ballX = self.ball.position[0]
+        ballY = self.ball.position[1]
         ballZ = self.ball.position[2]
         start = self.startDistance
         meta = self.endDistance
+        width = self.perspectiveRects[0].width
+        height = self.perspectiveRects[0].height
 
         print('ballZ', ballZ)
 
-        if ballZ < start or ballZ > meta:
-            self.ball.velocityVector[2] *= -1
+        if ballX - rad < -width/2 or ballX + rad > width/2:
+            self.ball.velocityVector[0] *= -1
 
+        if ballY - rad < -height/2 or ballY + rad > height/2:
+            self.ball.velocityVector[1] *= -1
+
+        if ballZ - rad < start or ballZ + rad > meta:
+            self.ball.velocityVector[2] *= -1
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

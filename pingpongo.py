@@ -3,13 +3,13 @@ from endscreen import *
 
 WINDOW_WIDTH = 1500
 WINDOW_HEIGHT = 1000
-NUMBER_OF_RECTANGLES = 12
+NUMBER_OF_RECTANGLES = 9
 PERSPECTIVE_PARAMETER = 0.8   # change it when u notice that ball looks creepy
 PLANE_POSITION= 2000
 START_POSITION = 2200
 END_POSITION = 11000
-BALL_SPEED = 35.0
-BALL_SPIN_PARAMETER = 150    # the lower parameter is, the greater influence of spin on trajectory
+BALL_SPEED = 70.0
+BALL_SPIN_PARAMETER = 120    # the lower parameter is, the greater influence of spin on trajectory
 BALL_SPIN_PARAMETER_DOS = 80   # more spin, more fun!
 
 RACKET_WIDTH = 300
@@ -21,7 +21,6 @@ def magicPerspectiveProjector(points, distanceFromPlane = PLANE_POSITION* PERSPE
     except ValueError:
         pointsPrim = points * distanceFromPlane / points[:, 2, np.newaxis]
     # return pointsPrim.astype(int)
-    pointsPrim[:, 2] = points[:, 2]
     return pointsPrim
 
 
@@ -30,25 +29,57 @@ class AThread(QtCore.QThread):
         super().__init__()
         self.view = view
         self.scene = view.graphicsscene
+        self.ingame = True
+        self.endscene = EndScreen(self.view.scenesize,view)
+
+    def updateCounters(self):
+        #del self.scene.scoreText
+       # del self.endscene.scoreText
+        #self.scene.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
+                               #  [self.scene.scenesize[0] - 100, -20], False, self.scene, size=29)
+        #self.endscene.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
+                                      #  [self.endscene.scenesize[0] - 100, -20], False, self.endscene, size=29)
+        #self.scene.removeItem(self.scene.scoreText)
+        #self.endscene.removeItem(self.endscene.scoreText)
+        self.scene.updateCounters()
+        self.endscene.updateCounters()
+        #self.endscene.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
+         #                                   [self.endscene.scenesize[0] - 100, -20], False, self.endscene, size=29)
+        pass
 
     def run(self):
         while 1:
-            if self.scene.myPoint == True:
-                self.view.setScene(EndScreen(self.view.scenesize),"kurwachuj")
-            elif self.scene.enemyPoint == True:
-                print("pupcia")
-               # x = EndScreen(self.view.scenesize)
-                self.view.setScene(EndScreen(self.view.scenesize,"kurwachuj"))
-                # playsound.playsound('gameover.mp3', True)
-            self.scene.update()
-            self.scene.moveBall()
-            self.scene.checkCollision()
+            if self.view.myPoint == True:
+                self.view.score[1]  = self.view.score[1] + 1
+                self.updateCounters()
+                self.view.setCursor(QtCore.Qt.ArrowCursor)
+                self.view.setScene(EndScreen(self.view.scenesize,"pupcia"))
+                self.view.myPoint = False
+                self.ingame = False
+
+            elif self.view.enemyPoint == True:
+                self.view.score[0]  = self.view.score[0] + 1
+                self.updateCounters()
+                self.view.setCursor(QtCore.Qt.ArrowCursor)
+                self.view.setScene(self.endscene)
+                self.view.enemyPoint = False
+                self.ingame = False
+
+            if self.view.restart:
+                self.scene.restart()
+                self.view.setScene(self.scene)
+                self.view.restart = False
+                self.ingame = True
+
+            if self.ingame:
+                print(self.view.score)
+                self.scene.run()
             time.sleep(1./120)
 
 
 class Racket(QtWidgets.QGraphicsItem):
 
-    def __init__(self, windowSize, zPosition,scene, color, width=RACKET_WIDTH, height=RACKET_HEIGHT):
+    def __init__(self, windowSize, zPosition,scene, color,  width=RACKET_WIDTH, height=RACKET_HEIGHT):
         super().__init__()
         self.xLimit = windowSize[0] / 2 - width / 2
         self.yLimit = windowSize[1] / 2 - height / 2
@@ -56,6 +87,7 @@ class Racket(QtWidgets.QGraphicsItem):
         self.width = width
         self.height = height
         self.nodes = None
+        self.zPos = zPosition
         self.position = np.array([0, 0, zPosition])
         self.velocity = np.array([0, 0, 0])
         self.createNodes()
@@ -64,6 +96,9 @@ class Racket(QtWidgets.QGraphicsItem):
 
     def getRacketRect(self):
         return [self.position[0]-(self.width/2),self.position[1] - (self.height/2), self.width, self.height]
+
+    def startingPos(self):
+        self.position = np.array([0, 0, self.zPos])
 
     def move(self, newPosition):
         if newPosition[0] > self.xLimit:
@@ -75,7 +110,7 @@ class Racket(QtWidgets.QGraphicsItem):
         elif newPosition[1] < -self.yLimit:
             newPosition[1] = -self.yLimit
         self.velocity = newPosition - self.position
-        self.position = np.array([newPosition[0], newPosition[1], newPosition[2]])
+        self.position = np.array([newPosition[0], newPosition[1], self.position[2]])
         self.createNodes()
 
 
@@ -159,7 +194,6 @@ class BackgroundRect(QtWidgets.QGraphicsItem):
                     self.origin[0] + self.projectedNodes[0][0], self.origin[1] + self.projectedNodes[0][1])
 
 
-
 class Ball(QtWidgets.QGraphicsItem):
     def __init__(self, windowSize, radius, scene, color=QtCore.Qt.yellow):
         super().__init__()
@@ -176,7 +210,7 @@ class Ball(QtWidgets.QGraphicsItem):
 
     def move(self):
         self.position += self.velocityVector
-        self.velocityVector += np.array([self.rotationVector[1], -self.rotationVector[0], 0]) / BALL_SPIN_PARAMETER * BALL_SPIN_PARAMETER_DOS
+        self.velocityVector += np.array([self.rotationVector[1], self.rotationVector[0], 0]) / BALL_SPIN_PARAMETER * BALL_SPIN_PARAMETER_DOS
         self.rotateSphere()
 
     def getRotationMatrix(self, rotationVector):
@@ -233,51 +267,43 @@ class Ball(QtWidgets.QGraphicsItem):
 
 
 
-
-
 class Game(QtWidgets.QGraphicsView):
     def __init__(self,parent = None):
         QtWidgets.QGraphicsView.__init__(self)
-        self.resize(WINDOW_WIDTH,WINDOW_HEIGHT)
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMouseTracking(True)
         self.scenesize = (WINDOW_WIDTH / 15.0 * 14.0, WINDOW_HEIGHT * 0.95)
-        self.graphicsscene = Scene(self.scenesize)
+        self.score = [0, 0]
         self.moveracket = False
+        self.myPoint = False
+        self.enemyPoint = False
+        self.restart = False
+        self.graphicsscene = Scene(self.scenesize,self)
         self.setScene(self.graphicsscene)
 
-
-    def mouseMoveEvent(self,e):
-        if self.moveracket :
-            self.graphicsscene.moveRacket(e)
-
-    def mousePressEvent(self,e):
-        if self.moveracket:
-            self.moveracket = False
-            self.setCursor(QtCore.Qt.ArrowCursor)
-        else:
-            self.moveracket = True
-            self.setCursor(QtCore.Qt.BlankCursor)
 
 
 class App(QtWidgets.QMainWindow):
     def __init__(self):
         super(App,self).__init__()
         self.setWindowTitle("pong")
-        self.resize(WINDOW_WIDTH,WINDOW_HEIGHT)
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.graphicsView = Game()
         self.setCentralWidget(self.graphicsView)
         self.show()
 
 
 class Scene(QtWidgets.QGraphicsScene):
-    def __init__(self,size):
+    def __init__(self,size,view):
         super().__init__()
         self.scenesize = size
+        self.view = view
         self.startDistance = START_POSITION * PERSPECTIVE_PARAMETER
         self.endDistance = END_POSITION * PERSPECTIVE_PARAMETER
         self.perspectiveRects = []
         self.windowSize = np.array(size)
         self.origin = self.windowSize/2
+        self.setSceneRect(QtCore.QRectF(0, 0, size[0], size[1]))
         gradient = QtGui.QLinearGradient(QtCore.QPointF(0, 0), QtCore.QPointF(100, 100))
         gradient.setColorAt(0, QtCore.Qt.black)
         painter = QtGui.QPainter()
@@ -288,22 +314,62 @@ class Scene(QtWidgets.QGraphicsScene):
         self.ball = Ball(self.windowSize, 60, self)
         self.ballRect = BackgroundRect(self.windowSize, 60,self, color=QtCore.Qt.white)
         self.myRacket = Racket(self.windowSize,self.startDistance,self,QtCore.Qt.red)
+        self.scoreText = TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]), [self.scenesize[0] - 100, -20], False, self, size=29)
+        self.scoreText.setPlainText("pupcia")
+        self.scoreText.setPos(self.scenesize[0] - 100, -20)
+        self.addItem(self.scoreText)
+        #self.connect()
         self.myPoint = False
         self.enemyPoint = False
+        self.moveracket = False
+
+        #self.objects = [self.enemyRacket,self.ball]
+        #self.objects = list(zip(self.objects,self.perspectiveRects))
+
+    def updateCounters(self):
+        self.removeItem(self.scoreText)
+        self.scorePOOP =TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]),
+                                        [self.scenesize[0] - 100, -20], False, self, size=29)
+
+    def run(self):
+        self.update()
+        #self.scoreText.setPlainText(QtCore."Score: {0} : {1}".format(self.view.score[0],self.view.score[1]))
+        self.moveBall()
+        self.checkCollision()
+
+    def mouseMoveEvent(self, event):
+        if self.moveracket :
+            self.myRacket.move(np.array([event.scenePos().x() - self.origin[0], event.scenePos().y() - self.origin[1], self.myRacket.position[2]]))
+
+    def mousePressEvent(self, e):
+        if self.moveracket:
+            self.moveracket = False
+            self.view.setCursor(QtCore.Qt.ArrowCursor)
+        else:
+            self.moveracket = True
+            self.view.setCursor(QtCore.Qt.BlankCursor)
 
     def createPerspectiveRects(self):
         for dist in np.linspace(self.startDistance, self.endDistance, NUMBER_OF_RECTANGLES):
             self.perspectiveRects.append(BackgroundRect(self.windowSize, dist,self))
 
-    def moveRacket(self,event):
-        self.myRacket.move(np.array([event.x() - self.origin[0], event.y() - self.origin[1], self.myRacket.position[2]]))
+    def restart(self):
+        self.myRacket.startingPos()
+        self.enemyRacket.startingPos()
+        self.ball.startingPos()
 
     def moveBall(self):
         self.ball.move()
         position = self.ball.position
         self.ballRect.moveRect(position[2])
         self.enemyRacket.move([position[0],position[1], self.enemyRacket.position[2]])
-        # self.myRacket.move([position[0],position[1],  self.myRacket.position[2]])
+
+    def invisible(self):
+        for i in self.perspectiveRects:
+            i.setVisible(False)
+        self.ball.setVisible(False)
+        self.enemyRacket.setVisible(False)
+        self.myRacket.setVisible(False)
 
     def checkCollision(self):
         rad = self.ball.radius
@@ -341,9 +407,6 @@ class Scene(QtWidgets.QGraphicsScene):
             else:
                 self.ball.velocityVector[2] *= -1
                 self.myPoint = True
-
-
-
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

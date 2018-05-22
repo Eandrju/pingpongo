@@ -7,8 +7,8 @@ NUMBER_OF_RECTANGLES = 9
 PERSPECTIVE_PARAMETER = 0.8   # change it when u notice that ball looks creepy
 PLANE_POSITION= 2000
 START_POSITION = 2200
-END_POSITION = 11000
-BALL_SPEED = 70.0
+END_POSITION = 9000
+BALL_SPEED = 30.0
 BALL_SPIN_PARAMETER = 120    # the lower parameter is, the greater influence of spin on trajectory
 BALL_SPIN_PARAMETER_DOS = 80   # more spin, more fun!
 
@@ -212,6 +212,11 @@ class Ball(QtWidgets.QGraphicsItem):
         self.position += self.velocityVector
         self.velocityVector += np.array([self.rotationVector[1], self.rotationVector[0], 0]) / BALL_SPIN_PARAMETER * BALL_SPIN_PARAMETER_DOS
         self.rotateSphere()
+
+    def startingPos(self):
+        self.position = np.array([0, 0, (START_POSITION + 1) * PERSPECTIVE_PARAMETER])
+        self.rotationVector = np.array([0, 0, 0])
+        self.velocityVector = np.array([0.0, 0.0, BALL_SPEED])
 
     def getRotationMatrix(self, rotationVector):
         angle = np.linalg.norm(rotationVector)

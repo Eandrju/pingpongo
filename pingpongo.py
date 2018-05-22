@@ -27,7 +27,7 @@ class AThread(QtCore.QThread):
                 print("pupcia")
                # x = EndScreen(self.view.scenesize)
                 self.view.setScene(EndScreen(self.view.scenesize,"kurwachuj"))
-                playsound.playsound('gameover.mp3', True)
+                # playsound.playsound('gameover.mp3', True)
             self.scene.update()
             self.scene.moveBall()
             self.scene.checkCollision()
@@ -45,6 +45,7 @@ class Racket(QtWidgets.QGraphicsItem):
         self.height = height
         self.nodes = None
         self.position = np.array([0, 0, zPosition])
+        self.velocity = np.array([0, 0, 0])
         self.createNodes()
         self.color = color
         scene.addItem(self)
@@ -61,7 +62,8 @@ class Racket(QtWidgets.QGraphicsItem):
             newPosition[1] = self.yLimit
         elif newPosition[1] < -self.yLimit:
             newPosition[1] = -self.yLimit
-        self.position = np.array([newPosition[0], newPosition[1], self.position[2]])
+        self.velocity = newPosition - self.position
+        self.position = np.array([newPosition[0], newPosition[1], newPosition[2]])
         self.createNodes()
 
 
@@ -191,10 +193,11 @@ class Ball(QtWidgets.QGraphicsItem):
     def __init__(self, windowSize, radius, scene, color=QtCore.Qt.yellow):
         super().__init__()
         self.origin = windowSize / 2
-        self.velocityVector = np.array([5, 5.0, 20])
+        self.velocityVector = np.array([5, 5.0, 15])
         self.position = np.array([5, 5, 2201 * chuj])
         self.radius = radius
         self.color = color
+        self.rotationVector = np.array([0, 0, 0])
         self.nodes = None
         self.points = None
         self.precision = 25
@@ -207,21 +210,22 @@ class Ball(QtWidgets.QGraphicsItem):
         self.rotateSphere()
         # self.points = self.points + self.velocityVector
 
-    def getRotationMatrix(self, phi, axis):
-        s = np.sin(phi)
-        c = np.cos(phi)
-        if axis == 'x':
-            return np.array([[1, 0, 0],
-                             [0, c, -s],
-                             [0, s, c]])
-        elif axis == 'y':
-            return np.array([[c, 0, s],
-                             [0, 1, 0],
-                             [-s, 0, c]])
-        elif axis == 'z':
-            return np.array([[c, -s, 0],
-                             [s, c, 0],
-                             [0, 0, 1]])
+    def getRotationMatrix(self, rotationVector):
+        angle = np.linalg.norm(rotationVector)
+        if angle == 0:
+            return np.identity(3)
+        unitVector = rotationVector / angle
+        s = np.sin(angle)
+        c = np.cos(angle)
+        u = unitVector[0]
+        v = unitVector[1]
+        w = unitVector[2]
+        return np.array([[u*u + (v*v + w*w)*c, u*v*(1 - c) - w*s, u*w*(1 - c) + v*s],
+                         [u*v*(1 - c) + w*s, v*v + (u*u + w*w)*c, u*w*(1 - c) - u*s],
+                         [u*w*(1 - c) - v*s, u*w*(1 - c) + u*s, w*w + (u*u + v*v)*c]])
+
+    def setRotationVector(self, rotationVector):
+        self.rotationVector = rotationVector
 
     def generateSphere(self):
         phis = np.linspace(0, 2 * np.pi,  self.precision)
@@ -233,13 +237,13 @@ class Ball(QtWidgets.QGraphicsItem):
                 x = self.radius * np.cos(phi) * np.cos(theta)
                 y = self.radius * np.cos(phi) * np.sin(theta)
                 z = self.radius * np.sin(phi)
-                print(z)
+                # print(z)
                 points[i][j] = np.array([x, y, z])
 
         self.points = points
 
     def rotateSphere(self):
-        self.points = self.points.dot(self.getRotationMatrix(0.02, 'y'))
+        self.points = self.points.dot(self.getRotationMatrix(self.rotationVector))
 
     # def boundingRect(self):
     #     projectedRadius = np.linalg.norm(self.projectedNodes[0] - self.projectedNodes[1])
@@ -269,7 +273,7 @@ class Ball(QtWidgets.QGraphicsItem):
         y0 = self.origin[1]
         for i in range(1, len(points)):
             for j in range(1, len(points[0])):
-                print(self.points[i][j][2])
+                # print(self.points[i][j][2])
                 if (self.points[i][j][2] + self.points[i-1][j-1][2]) < 0:
                     p.drawConvexPolygon(QtCore.QPoint(points[i][j][0] + x0, points[i][j][1] + y0),
                                         QtCore.QPoint(points[i-1][j][0] + x0, points[i-1][j][1] + y0),
@@ -278,11 +282,6 @@ class Ball(QtWidgets.QGraphicsItem):
 
 
 
-    #
-    # def createNodes(self):
-    #     self.nodes = np.array([self.position, [self.position[0] + self.radius, self.position[1], self.position[2]]])
-    #     self.projectedNodes = magicPerspectiveProjector(self.nodes)
-    #     # print(self.projectedNodes)
 
 
 
@@ -351,14 +350,15 @@ class Scene(QtWidgets.QGraphicsScene):
             self.perspectiveRects.append(BackgroundRect(self.windowSize, dist,self))
 
     def moveRacket(self,event):
-        self.myRacket.move(np.array([event.x() - self.origin[0], event.y() - self.origin[1]], dtype=int))
+        self.myRacket.move(np.array([event.x() - self.origin[0], event.y() - self.origin[1], self.myRacket.position[2]], dtype=int))
         #self.update()
 
     def moveBall(self):
         self.ball.move()
         position = self.ball.position
         self.ballRect.moveRect(position[2])
-        self.enemyRacket.move([position[0],position[1]])
+        self.enemyRacket.move([position[0],position[1], self.enemyRacket.position[2]])
+        self.myRacket.move([position[0],position[1],  self.myRacket.position[2]])
 
     def checkCollision(self):
         rad = self.ball.radius
@@ -380,8 +380,10 @@ class Scene(QtWidgets.QGraphicsScene):
 
         if ballZ  < start:
             rect = self.myRacket.getRacketRect()
+            print(self.myRacket.velocity)
             if ballX > rect[0] and ballX < rect[0]+rect[2] and ballY > rect[1] and ballY < rect[1]+rect[3]:
                 self.ball.velocityVector[2] *= -1
+                self.ball.rotationVector = np.array([ -self.myRacket.velocity[1],  self.myRacket.velocity[0], 0]) / 100
             else:
                 self.ball.velocityVector[2] *= 0
                 self.enemyPoint = True
@@ -390,6 +392,7 @@ class Scene(QtWidgets.QGraphicsScene):
             rect = self.enemyRacket.getRacketRect()
             if ballX > rect[0] and ballX < rect[0]+rect[2] and ballY > rect[1] and ballY < rect[1]+rect[3]:
                 self.ball.velocityVector[2] *= -1
+                self.ball.rotationVector = np.array([ -self.enemyRacket.velocity[1],  self.enemyRacket.velocity[0], 0]) / 100
             else:
                 self.ball.velocityVector[2] *= -1
                 self.myPoint = True

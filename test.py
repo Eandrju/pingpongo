@@ -53,20 +53,33 @@ def getRotationMatrix(phi, axis):
 
 
 
+# def generateSphere(a):
+#     phis = np.linspace(0, 2*np.pi, PRECISION)
+#     thetas = np.linspace(-np.pi, np.pi, PRECISION / 2)
+#
+#     points = [[None for j in range(thetas.size)] for i in range(phis.size)]
+#     # print(np.array(points).shape)
+#     for i, phi in enumerate(phis):
+#         for j, theta in enumerate(thetas):
+#              x = r * np.cos(phi) * np.cos(theta)
+#              y = r * np.cos(phi) * np.sin(theta)
+#              z = r * np.sin(phi)
+#              points[i][j] = Point([x, y, z]) * getRotationMatrix(a, 'x')
+#     return points
+
+
 def generateSphere(a):
-    phis = np.linspace(0, 2*np.pi, PRECISION)
+    phis = np.linspace(0, 2 * np.pi, PRECISION)
     thetas = np.linspace(-np.pi, np.pi, PRECISION / 2)
 
     points = [[None for j in range(thetas.size)] for i in range(phis.size)]
-    # print(np.array(points).shape)
     for i, phi in enumerate(phis):
         for j, theta in enumerate(thetas):
-             x = r * np.cos(phi) * np.cos(theta)
-             y = r * np.cos(phi) * np.sin(theta)
-             z = r * np.sin(phi)
-             points[i][j] = Point([x, y, z]) * getRotationMatrix(a, 'x')
+            x = r * np.cos(phi) * np.cos(theta)
+            y = r * np.cos(phi) * np.sin(theta)
+            z = r * np.sin(phi)
+            points[i][j] =  Point(np.array([x, y, z]))
     return points
-
 
 
 class Example(QWidget):

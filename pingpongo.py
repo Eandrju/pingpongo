@@ -406,7 +406,7 @@ class Scene(QtWidgets.QGraphicsScene):
                 print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= 0
-                self.enemyPoint = True
+                self.view.enemyPoint = True
 
         elif ballZ  > meta:
             rect = self.enemyRacket.getRacketRect()
@@ -417,7 +417,7 @@ class Scene(QtWidgets.QGraphicsScene):
                 print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= -1
-                self.myPoint = True
+                self.view.myPoint = True
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

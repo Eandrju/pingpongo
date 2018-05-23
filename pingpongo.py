@@ -215,7 +215,7 @@ class Ball(QtWidgets.QGraphicsItem):
 
     def startingPos(self):
         self.position = np.array([0, 0, (START_POSITION + 1) * PERSPECTIVE_PARAMETER])
-        self.rotationVector = np.array([0, 0, 0])
+        self.rotationVector = np.array([0.0, 0.0, 0.0])
         self.velocityVector = np.array([0.0, 0.0, BALL_SPEED])
 
     def getRotationMatrix(self, rotationVector):

@@ -8,10 +8,11 @@ PERSPECTIVE_PARAMETER = 0.8   # change it when u notice that ball looks creepy
 PLANE_POSITION= 2000
 START_POSITION = 2200
 END_POSITION = 9000
-BALL_SPEED = 30.0
+BALL_SPEED = 40.0
 BALL_SPIN_PARAMETER = 120    # the lower parameter is, the greater influence of spin on trajectory
 BALL_SPIN_PARAMETER_DOS = 80   # more spin, more fun!
-
+BALL_PRECISION = 25
+MAX_SPIN = 0.5
 RACKET_WIDTH = 300
 RACKET_HEIGHT = 200
 
@@ -72,7 +73,7 @@ class AThread(QtCore.QThread):
                 self.ingame = True
 
             if self.ingame:
-                print(self.view.score)
+                # print(self.view.score)
                 self.scene.run()
             time.sleep(1./120)
 
@@ -202,15 +203,14 @@ class Ball(QtWidgets.QGraphicsItem):
         self.position = np.array([0, 0, (START_POSITION + 1) * PERSPECTIVE_PARAMETER])
         self.radius = radius
         self.color = color
-        self.rotationVector = np.array([0, 0, 0])
+        self.rotationVector = np.array([0.0, 0.0, 0.0])
         self.points = None
-        self.precision = 25
         self.generateSphere()
         scene.addItem(self)
 
     def move(self):
         self.position += self.velocityVector
-        self.velocityVector += np.array([self.rotationVector[1], self.rotationVector[0], 0]) / BALL_SPIN_PARAMETER * BALL_SPIN_PARAMETER_DOS
+        self.velocityVector += np.array([-self.rotationVector[1], self.rotationVector[0], 0]) / BALL_SPIN_PARAMETER * BALL_SPIN_PARAMETER_DOS
         self.rotateSphere()
 
     def startingPos(self):
@@ -233,8 +233,8 @@ class Ball(QtWidgets.QGraphicsItem):
                          [u*w*(1 - c) - v*s, u*w*(1 - c) + u*s, w*w + (u*u + v*v)*c]])
 
     def generateSphere(self):
-        phis = np.linspace(0, 2 * np.pi,  self.precision)
-        thetas = np.linspace(-np.pi, np.pi,  self.precision / 2)
+        phis = np.linspace(0, 2 * np.pi,  BALL_PRECISION)
+        thetas = np.linspace(-np.pi, np.pi,  BALL_PRECISION / 2)
 
         points = np.zeros((phis.size, thetas.size, 3))
         for i, phi in enumerate(phis):
@@ -246,6 +246,8 @@ class Ball(QtWidgets.QGraphicsItem):
         self.points = points
 
     def rotateSphere(self):
+        if np.linalg.norm(self.rotationVector) > MAX_SPIN:
+            self.rotationVector = self.rotationVector / np.linalg.norm(self.rotationVector) * MAX_SPIN
         self.points = self.points.dot(self.getRotationMatrix(self.rotationVector))
 
     def boundingRect(self):
@@ -320,7 +322,7 @@ class Scene(QtWidgets.QGraphicsScene):
         self.ballRect = BackgroundRect(self.windowSize, 60,self, color=QtCore.Qt.white)
         self.myRacket = Racket(self.windowSize,self.startDistance,self,QtCore.Qt.red)
         self.scoreText = TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]), [self.scenesize[0] - 100, -20], False, self, size=29)
-        self.scoreText.setPlainText("pupcia")
+        self.scoreText.setPlainText("censore")
         self.scoreText.setPos(self.scenesize[0] - 100, -20)
         self.addItem(self.scoreText)
         #self.connect()
@@ -359,6 +361,7 @@ class Scene(QtWidgets.QGraphicsScene):
             self.perspectiveRects.append(BackgroundRect(self.windowSize, dist,self))
 
     def restart(self):
+        print('restart !!!!!')
         self.myRacket.startingPos()
         self.enemyRacket.startingPos()
         self.ball.startingPos()
@@ -395,11 +398,12 @@ class Scene(QtWidgets.QGraphicsScene):
 
         if ballZ  < start:
             rect = self.myRacket.getRacketRect()
-            print(self.myRacket.velocity)
+            # print(self.myRacket.velocity)
             if ballX > rect[0] and ballX < rect[0]+rect[2] and ballY > rect[1] and ballY < rect[1]+rect[3]:
-                print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype)
+                # print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype)
                 self.ball.velocityVector[2] *= -1
-                self.ball.rotationVector += np.array([ -self.myRacket.velocity[1],  self.myRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS
+                self.ball.rotationVector += (np.array([-self.myRacket.velocity[1],  self.myRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS)
+                print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= 0
                 self.enemyPoint = True
@@ -407,8 +411,10 @@ class Scene(QtWidgets.QGraphicsScene):
         elif ballZ  > meta:
             rect = self.enemyRacket.getRacketRect()
             if ballX > rect[0] and ballX < rect[0]+rect[2] and ballY > rect[1] and ballY < rect[1]+rect[3]:
+                print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype, self.enemyRacket.velocity.dtype)
                 self.ball.velocityVector[2] *= -1
-                self.ball.rotationVector = np.array([ int(-self.enemyRacket.velocity[1]),  int(self.enemyRacket.velocity[0]), 0]) / BALL_SPIN_PARAMETER_DOS
+                self.ball.rotationVector += (np.array([-self.enemyRacket.velocity[1],  self.enemyRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS )
+                print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= -1
                 self.myPoint = True

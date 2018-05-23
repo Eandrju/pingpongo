@@ -73,7 +73,6 @@ class AThread(QtCore.QThread):
                 self.ingame = True
 
             if self.ingame:
-                # print(self.view.score)
                 self.scene.run()
             time.sleep(1./120)
 

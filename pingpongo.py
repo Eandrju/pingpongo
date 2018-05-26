@@ -26,32 +26,31 @@ def magicPerspectiveProjector(points, distanceFromPlane = PLANE_POSITION* PERSPE
 
 
 class AThread(QtCore.QThread):
-    def __init__(self, view):
+    changep1score = QtCore.pyqtSignal()
+    changep2score = QtCore.pyqtSignal()
+    sendSignal = QtCore.pyqtSignal()
+
+    def __init__(self, view,gui):
         super().__init__()
         self.view = view
+        self.gui = gui
         self.scene = view.graphicsscene
         self.ingame = True
         self.endscene = EndScreen(self.view.scenesize,view)
+        self.changep1score.connect(self.gui.changep1)
+        self.changep2score.connect(self.gui.changep2)
 
     def updateCounters(self):
-        #del self.scene.scoreText
-       # del self.endscene.scoreText
-        #self.scene.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
-                               #  [self.scene.scenesize[0] - 100, -20], False, self.scene, size=29)
-        #self.endscene.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
-                                      #  [self.endscene.scenesize[0] - 100, -20], False, self.endscene, size=29)
-        #self.scene.removeItem(self.scene.scoreText)
-        #self.endscene.removeItem(self.endscene.scoreText)
-        self.scene.updateCounters()
-        self.endscene.updateCounters()
-        #self.endscene.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
-         #                                   [self.endscene.scenesize[0] - 100, -20], False, self.endscene, size=29)
+        self.changep1score.emit()
+        self.changep2score.emit()
         pass
 
     def run(self):
         while 1:
             if self.view.myPoint == True:
+                self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[1]  = self.view.score[1] + 1
+                #self.gui.p2Score.setPlainText(str(self.view.score[1]))
                 self.updateCounters()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.setScene(EndScreen(self.view.scenesize,"pupcia"))
@@ -59,7 +58,9 @@ class AThread(QtCore.QThread):
                 self.ingame = False
 
             elif self.view.enemyPoint == True:
+                self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[0]  = self.view.score[0] + 1
+                #self.gui.p1Score.setPlainText(str(self.view.score[0]))
                 self.updateCounters()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.setScene(self.endscene)

@@ -3,8 +3,10 @@ import pingpongo
 
 class Window(QtWidgets.QMainWindow):
 
+
     def __init__(self):
         super(Window, self).__init__()
+        QtCore.QObject.__init__(self)
         uic.loadUi('ping.ui', self)
         self.setWindowTitle("pongping")
         #QtWidgets.QTextBrowser.
@@ -16,6 +18,7 @@ class Window(QtWidgets.QMainWindow):
         self.connButton.clicked.connect(self.startgame)
         self.testconnButton.clicked.connect(self.checkconn)
         self.viewinit()
+        #self.changep1score.emit()
         self.show()
 
     def viewinit(self):
@@ -29,10 +32,17 @@ class Window(QtWidgets.QMainWindow):
         self.graphicsView.graphicsscene = pingpongo.Scene(self.graphicsView.scenesize, self.graphicsView)
         self.graphicsView.setScene(self.graphicsView.graphicsscene)
 
+    @QtCore.pyqtSlot()
+    def changep1(self):
+        self.p1Score.setPlainText(str(self.graphicsView.score[0]))
+
+    @QtCore.pyqtSlot()
+    def changep2(self):
+        self.p2Score.setPlainText(str(self.graphicsView.score[1]))
 
     def startgame(self):
         #self.setCentralWidget(self.graphicsView)
-        gameLoop = pingpongo.AThread(self.graphicsView)
+        gameLoop = pingpongo.AThread(self.graphicsView,self)
         #time.sleep(2)
         gameLoop.start()
         time.sleep(0.1)
@@ -44,8 +54,12 @@ class Window(QtWidgets.QMainWindow):
     def checkconn(self):
         pass
 
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     GUI = Window()
+    app.exec_()
+    while 1:
+        continue
     sys.exit(app.exec_())
 

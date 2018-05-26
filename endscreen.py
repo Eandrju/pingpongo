@@ -18,11 +18,11 @@ class EndScreen(QtWidgets.QGraphicsScene):
         self.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
                                   [self.scenesize[0] - 100, -20], False, self, size=29)
 
+
     def updateCounters(self):
         self.removeItem(self.scoreText)
         self.scoreFUCK = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
                                   [self.scenesize[0] - 100, -20], False, self, size=29)
-
 
 class TextItem(QtWidgets.QGraphicsTextItem):
     def __init__(self,text ,position, hoverable, scene, size = 30,

@@ -36,7 +36,8 @@ class AThread(QtCore.QThread):
         self.gui = gui
         self.scene = view.graphicsscene
         self.ingame = True
-        self.endscene = EndScreen(self.view.scenesize,view)
+        self.enemyendscene = EndScreen(self.view.scenesize, view,"Point player one")
+        self.myendscene = EndScreen(self.view.scenesize, view,"Point player two")
         self.changep1score.connect(self.gui.changep1)
         self.changep2score.connect(self.gui.changep2)
 
@@ -45,25 +46,25 @@ class AThread(QtCore.QThread):
         self.changep2score.emit()
         pass
 
+    def updateEnemy(self,data):
+        pass
+
     def run(self):
         while 1:
+            start = time.time()
             if self.view.myPoint == True:
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[1]  = self.view.score[1] + 1
-                #self.gui.p2Score.setPlainText(str(self.view.score[1]))
                 self.updateCounters()
-                self.view.setCursor(QtCore.Qt.ArrowCursor)
-                self.view.setScene(EndScreen(self.view.scenesize,"pupcia"))
+                self.view.setScene(self.myendscene)
                 self.view.myPoint = False
                 self.ingame = False
 
             elif self.view.enemyPoint == True:
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[0]  = self.view.score[0] + 1
-                #self.gui.p1Score.setPlainText(str(self.view.score[0]))
                 self.updateCounters()
-                self.view.setCursor(QtCore.Qt.ArrowCursor)
-                self.view.setScene(self.endscene)
+                self.view.setScene(self.enemyendscene)
                 self.view.enemyPoint = False
                 self.ingame = False
 
@@ -75,8 +76,9 @@ class AThread(QtCore.QThread):
 
             if self.ingame:
                 self.scene.run()
+            end = time.time()
             time.sleep(1./120)
-
+QtCore.Qtimer
 
 class Racket(QtWidgets.QGraphicsItem):
 
@@ -275,7 +277,7 @@ class Ball(QtWidgets.QGraphicsItem):
 
 
 class Game(QtWidgets.QGraphicsView):
-    def __init__(self,parent = None):
+    def __init__(self, parent = None):
         QtWidgets.QGraphicsView.__init__(self)
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMouseTracking(True)
@@ -325,13 +327,10 @@ class Scene(QtWidgets.QGraphicsScene):
         self.scoreText.setPlainText("censore")
         self.scoreText.setPos(self.scenesize[0] - 100, -20)
         self.addItem(self.scoreText)
-        #self.connect()
         self.myPoint = False
         self.enemyPoint = False
         self.moveracket = False
 
-        #self.objects = [self.enemyRacket,self.ball]
-        #self.objects = list(zip(self.objects,self.perspectiveRects))
 
     def updateCounters(self):
         self.removeItem(self.scoreText)
@@ -340,7 +339,6 @@ class Scene(QtWidgets.QGraphicsScene):
 
     def run(self):
         self.update()
-        #self.scoreText.setPlainText(QtCore."Score: {0} : {1}".format(self.view.score[0],self.view.score[1]))
         self.moveBall()
         self.checkCollision()
 
@@ -370,7 +368,6 @@ class Scene(QtWidgets.QGraphicsScene):
         self.ball.move()
         position = self.ball.position
         self.ballRect.moveRect(position[2])
-        self.enemyRacket.move([position[0],position[1], self.enemyRacket.position[2]])
 
     def invisible(self):
         for i in self.perspectiveRects:

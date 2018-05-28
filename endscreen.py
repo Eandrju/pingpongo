@@ -1,7 +1,7 @@
 from imports import *
 
 class EndScreen(QtWidgets.QGraphicsScene):
-    def __init__(self, size, view):
+    def __init__(self, size, view, text):
         super().__init__()
         self.scenesize = size
         self.view = view
@@ -13,16 +13,9 @@ class EndScreen(QtWidgets.QGraphicsScene):
         painter = QtGui.QPainter()
         self.setBackgroundBrush(QtGui.QBrush(gradient))
         self.drawBackground(painter, QtCore.QRectF())
-        self.textItem1 = TextItem("Point player one", [size[0] / 2 - 150, size[1] / 2 - 100], False, self)
+        self.textItem1 = TextItem(text, [size[0] / 2 - 150, size[1] / 2 - 100], False, self)
         self.textItem2 = TextItem("continue", [size[0] / 2 - 75, size[1] / 2 ], True, self)
-        self.scoreText = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
-                                  [self.scenesize[0] - 100, -20], False, self, size=29)
 
-
-    def updateCounters(self):
-        self.removeItem(self.scoreText)
-        self.scoreFUCK = TextItem("Score: {0} : {1}".format(self.view.score[0], self.view.score[1]),
-                                  [self.scenesize[0] - 100, -20], False, self, size=29)
 
 class TextItem(QtWidgets.QGraphicsTextItem):
     def __init__(self,text ,position, hoverable, scene, size = 30,

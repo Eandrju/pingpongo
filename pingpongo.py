@@ -25,6 +25,8 @@ def magicPerspectiveProjector(points, distanceFromPlane = PLANE_POSITION* PERSPE
     return pointsPrim
 
 
+
+
 class AThread(QtCore.QThread):
     changep1score = QtCore.pyqtSignal()
     changep2score = QtCore.pyqtSignal()
@@ -41,6 +43,7 @@ class AThread(QtCore.QThread):
         self.changep1score.connect(self.gui.changep1)
         self.changep2score.connect(self.gui.changep2)
 
+
     def updateCounters(self):
         self.changep1score.emit()
         self.changep2score.emit()
@@ -50,8 +53,8 @@ class AThread(QtCore.QThread):
         pass
 
     def run(self):
+
         while 1:
-            start = time.time()
             if self.view.myPoint == True:
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[1]  = self.view.score[1] + 1
@@ -76,9 +79,7 @@ class AThread(QtCore.QThread):
 
             if self.ingame:
                 self.scene.run()
-            end = time.time()
             time.sleep(1./120)
-QtCore.Qtimer
 
 class Racket(QtWidgets.QGraphicsItem):
 
@@ -275,7 +276,6 @@ class Ball(QtWidgets.QGraphicsItem):
                                         QtCore.QPoint(points[i][j-1][0] + x0, points[i][j-1][1] + y0))
 
 
-
 class Game(QtWidgets.QGraphicsView):
     def __init__(self, parent = None):
         QtWidgets.QGraphicsView.__init__(self)
@@ -289,7 +289,6 @@ class Game(QtWidgets.QGraphicsView):
         self.restart = False
         self.graphicsscene = Scene(self.scenesize,self)
         self.setScene(self.graphicsscene)
-
 
 
 class App(QtWidgets.QMainWindow):
@@ -336,6 +335,22 @@ class Scene(QtWidgets.QGraphicsScene):
         self.removeItem(self.scoreText)
         self.scorePOOP =TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]),
                                         [self.scenesize[0] - 100, -20], False, self, size=29)
+
+    @QtCore.pyqtSlot()
+    def updatePaddleNet(self, data):
+        if data is None:
+            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+        self.enemyRacket.position = data
+
+    @QtCore.pyqtSlot()
+    def updatePaddleBall(self, data):
+        if data is None:
+            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+        self.enemyRacket.position = data[0]
+        self.ball.velocityVector = data[1]
+        self.ball.position = data[2]
+        self.ball.rotationVector = data[3]
+
 
     def run(self):
         self.update()

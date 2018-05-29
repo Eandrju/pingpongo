@@ -1,3 +1,5 @@
+from PyQt5 import QtCore
+
 from imports import *
 from endscreen import *
 
@@ -9,18 +11,21 @@ PLANE_POSITION= 2000
 START_POSITION = 2200
 END_POSITION = 9000
 BALL_SPEED = 40.0
-BALL_SPIN_PARAMETER = 120    # the lower parameter is, the greater influence of spin on trajectory
-BALL_SPIN_PARAMETER_DOS = 80   # more spin, more fun!
+BALL_SPIN_PARAMETER = 100    # the lower parameter is, the greater influence of spin on trajectory
+BALL_SPIN_PARAMETER_DOS = 50   # more spin, more fun!
 BALL_PRECISION = 25
-MAX_SPIN = 0.5
+MAX_SPIN = 0.15
 RACKET_WIDTH = 300
 RACKET_HEIGHT = 200
+LENGTH_PARAM = 3
 
 def magicPerspectiveProjector(points, distanceFromPlane = PLANE_POSITION* PERSPECTIVE_PARAMETER):  # points -> ndarray with shape [x, 3]
     try:
         pointsPrim = points * distanceFromPlane / points[:, 2]
+        pointsPrim[:, 2] = points[:, 2]
     except ValueError:
         pointsPrim = points * distanceFromPlane / points[:, 2, np.newaxis]
+        pointsPrim[:, 2] = points[:, 2]
     # return pointsPrim.astype(int)
     return pointsPrim
 
@@ -81,8 +86,142 @@ class AThread(QtCore.QThread):
                 self.scene.run()
             time.sleep(1./120)
 
-class Racket(QtWidgets.QGraphicsItem):
+class Obstacle(QtWidgets.QGraphicsItem):
+    class CubeSide:
+        def __init__(self, poly, line1, line2, zPos, name=None):
+            self.name = name
+            self.poly = poly
+            self.line1 = line1
+            self.line2 = line2
+            self.midPoint = np.array([(line1[0] + line1[2]) / 2, (line1[1] + line1[3]) / 2, zPos])
 
+        def draw(self, qp):
+            qp.drawConvexPolygon(self.poly[0], self.poly[1], self.poly[2], self.poly[3])
+            # qp.drawLine(self.line1[0], self.line1[1], self.line1[2], self.line1[3])
+            # qp.drawLine(self.line2[0], self.line2[1], self.line2[2], self.line2[3])
+
+
+    def __init__(self, windowSize, position,scene, color,  dimension):
+        super().__init__()
+        self.position = position
+        self.origin = windowSize / 2
+        self.color = color
+        self.dimension = dimension
+        self.nodes = None
+        self.projectedNodes = None
+        self.createNodes()
+        self.setZValue(1 / self.position[2])
+        scene.addItem(self)
+        
+    def createNodes(self):
+        x = self.position[0]
+        y = self.position[1]
+        z = self.position[2]
+
+        self.nodes = np.array([[x + self.dimension, y + self.dimension, z + self.dimension * LENGTH_PARAM],  #0
+                               [x + self.dimension, y + self.dimension, z - self.dimension * LENGTH_PARAM],  #1
+                               [x + self.dimension, y - self.dimension, z + self.dimension * LENGTH_PARAM],  #2
+                               [x + self.dimension, y - self.dimension, z - self.dimension * LENGTH_PARAM],  #3
+                               [x - self.dimension, y + self.dimension, z + self.dimension * LENGTH_PARAM],  #4
+                               [x - self.dimension, y + self.dimension, z - self.dimension * LENGTH_PARAM],  #5
+                               [x - self.dimension, y - self.dimension, z + self.dimension * LENGTH_PARAM],  #6
+                               [x - self.dimension, y - self.dimension, z - self.dimension * LENGTH_PARAM]]) #7
+
+        self.projectedNodes = magicPerspectiveProjector(self.nodes)
+
+    def boundingRect(self):
+        return QtCore.QRectF(self.origin[0] + self.position[0] - self.dimension//2,
+                             self.origin[1] + self.position[1] - self.dimension//2,
+                             self.dimension, self.dimension)
+
+    def paint(self, qp, o, widgets=None):
+        pen = QtGui.QPen(QtGui.QColor(128, 0, 0), 2, QtCore.Qt.SolidLine)
+        brush = QtGui.QBrush(self.color)
+
+        qp.setPen(pen)
+        qp.setBrush(brush)
+        pN = self.projectedNodes
+        o = self.origin
+        cubeSides =  []
+        poly = [QtCore.QPoint(o[0] + pN[4][0], o[1] + pN[4][1]),
+                QtCore.QPoint(o[0] + pN[5][0], o[1] + pN[5][1]),
+                QtCore.QPoint(o[0] + pN[7][0], o[1] + pN[7][1]),
+                QtCore.QPoint(o[0] + pN[6][0], o[1] + pN[6][1])]
+
+        line1 = [o[0] + pN[4][0], o[1] + pN[4][1], o[0] + pN[7][0], o[1] + pN[7][1]]
+        line2 = [o[0] + pN[5][0], o[1] + pN[5][1], o[0] + pN[6][0], o[1] + pN[6][1]]
+
+        cubeSides.append(self.CubeSide(poly, line1, line2, (pN[4][2] + pN[7][2])/2, 'left'))
+
+        poly = [QtCore.QPoint(o[0] + pN[0][0], o[1] + pN[0][1]),
+                             QtCore.QPoint(o[0] + pN[1][0], o[1] + pN[1][1]),
+                             QtCore.QPoint(o[0] + pN[3][0], o[1] + pN[3][1]),
+                             QtCore.QPoint(o[0] + pN[2][0], o[1] + pN[2][1])]
+
+        line1 = [o[0] + pN[0][0], o[1] + pN[0][1], o[0] + pN[3][0], o[1] + pN[3][1]]
+        line2 = [o[0] + pN[1][0], o[1] + pN[1][1], o[0] + pN[2][0], o[1] + pN[2][1]]
+
+        cubeSides.append(self.CubeSide(poly, line1, line2, (pN[0][2] + pN[3][2])/2, 'right'))
+
+        poly = [QtCore.QPoint(o[0] + pN[0][0], o[1] + pN[0][1]),
+                             QtCore.QPoint(o[0] + pN[1][0], o[1] + pN[1][1]),
+                             QtCore.QPoint(o[0] + pN[5][0], o[1] + pN[5][1]),
+                             QtCore.QPoint(o[0] + pN[4][0], o[1] + pN[4][1])]
+
+        line1 = [o[0] + pN[0][0], o[1] + pN[0][1], o[0] + pN[5][0], o[1] + pN[5][1]]
+        line2 = [o[0] + pN[1][0], o[1] + pN[1][1], o[0] + pN[4][0], o[1] + pN[4][1]]
+
+        cubeSides.append(self.CubeSide(poly, line1, line2, (pN[0][2] + pN[5][2])/2, 'bottom'))
+        poly = [QtCore.QPoint(o[0] + pN[2][0], o[1] + pN[2][1]),
+                             QtCore.QPoint(o[0] + pN[3][0], o[1] + pN[3][1]),
+                             QtCore.QPoint(o[0] + pN[7][0], o[1] + pN[7][1]),
+                             QtCore.QPoint(o[0] + pN[6][0], o[1] + pN[6][1])]
+
+        line1 = [o[0] + pN[2][0], o[1] + pN[2][1], o[0] + pN[7][0], o[1] + pN[7][1]]
+        line2 = [o[0] + pN[3][0], o[1] + pN[3][1], o[0] + pN[6][0], o[1] + pN[6][1]]
+
+        cubeSides.append(self.CubeSide(poly, line1, line2, (pN[2][2] + pN[7][2])/2, 'top'))
+
+
+        poly = [QtCore.QPoint(o[0] + pN[0][0], o[1] + pN[0][1]),
+                             QtCore.QPoint(o[0] + pN[2][0], o[1] + pN[2][1]),
+                             QtCore.QPoint(o[0] + pN[6][0], o[1] + pN[6][1]),
+                             QtCore.QPoint(o[0] + pN[4][0], o[1] + pN[4][1])]
+
+        line1 = [o[0] + pN[0][0], o[1] + pN[0][1], o[0] + pN[6][0], o[1] + pN[6][1]]
+        line2 = [o[0] + pN[2][0], o[1] + pN[2][1], o[0] + pN[4][0], o[1] + pN[4][1]]
+        cubeSides.append(self.CubeSide(poly, line1, line2, (pN[0][2] + pN[6][2])/2))
+
+        print(4)
+        print('pN[0][2]', pN[0][2])
+        print('pN[6][2]', pN[6][2])
+
+        poly = [QtCore.QPoint(o[0] + pN[1][0], o[1] + pN[1][1]),
+                             QtCore.QPoint(o[0] + pN[3][0], o[1] + pN[3][1]),
+                             QtCore.QPoint(o[0] + pN[7][0], o[1] + pN[7][1]),
+                             QtCore.QPoint(o[0] + pN[5][0], o[1] + pN[5][1])]
+
+        line1 = [o[0] + pN[1][0], o[1] + pN[1][1], o[0] + pN[7][0], o[1] + pN[7][1]]
+        line2 = [o[0] + pN[3][0], o[1] + pN[3][1], o[0] + pN[5][0], o[1] + pN[5][1]]
+        cubeSides.append(self.CubeSide(poly, line1, line2, (pN[0][2] + pN[7][2])/2))
+
+        # print(5)
+        # print('pN[1][2]', pN[1][2])
+        # print('pN[7][2]', pN[7][2])
+        # cubeSides.append(self.CubeSide(poly, line1, line2, (pN[1][2] + pN[7][2])/2))
+        #
+        # print('chuuuuuuuj' , cubeSides[5].midPoint, np.linalg.norm(cubeSides[5].midPoint))
+        # print('chuuuuuuuj' , cubeSides[4].midPoint, np.linalg.norm(cubeSides[4].midPoint))
+        # print()
+        # cubeSides[5].draw(qp)
+        # print(reversed(sorted([np.linalg.norm(x.midPoint) for x in cubeSides])))
+        for cubeSide in sorted(cubeSides, key= lambda x: np.linalg.norm(x.midPoint - np.array([o[0], o[1], 0])), reverse=True):
+            cubeSide.draw(qp)
+
+
+
+
+class Racket(QtWidgets.QGraphicsItem):
     def __init__(self, windowSize, zPosition,scene, color,  width=RACKET_WIDTH, height=RACKET_HEIGHT):
         super().__init__()
         self.xLimit = windowSize[0] / 2 - width / 2
@@ -95,6 +234,7 @@ class Racket(QtWidgets.QGraphicsItem):
         self.position = np.array([0, 0, zPosition])
         self.velocity = np.array([0, 0, 0])
         self.createNodes()
+        self.setZValue(1 / zPosition)
         self.color = color
         scene.addItem(self)
 
@@ -162,6 +302,7 @@ class BackgroundRect(QtWidgets.QGraphicsItem):
         self.style = style
         self.penWidth = 1
         self.createNodes()
+        self.setZValue(1 / END_POSITION)
         scene.addItem(self)
 
     def moveRect(self,z):
@@ -209,12 +350,14 @@ class Ball(QtWidgets.QGraphicsItem):
         self.rotationVector = np.array([0.0, 0.0, 0.0])
         self.points = None
         self.generateSphere()
+        self.setZValue(1 / self.position[2])
         scene.addItem(self)
 
     def move(self):
         self.position += self.velocityVector
         self.velocityVector += np.array([-self.rotationVector[1], self.rotationVector[0], 0]) / BALL_SPIN_PARAMETER * BALL_SPIN_PARAMETER_DOS
         self.rotateSphere()
+        self.setZValue(1 /self.position[2])
 
     def startingPos(self):
         self.position = np.array([0, 0, (START_POSITION + 1) * PERSPECTIVE_PARAMETER])
@@ -320,6 +463,7 @@ class Scene(QtWidgets.QGraphicsScene):
         self.createPerspectiveRects()
         self.enemyRacket = Racket(self.windowSize, self.endDistance, self, QtCore.Qt.blue)
         self.ball = Ball(self.windowSize, 60, self)
+        self.obstacle = Obstacle(self.windowSize, [-200, 200, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)], self, QtCore.Qt.gray, 100)
         self.ballRect = BackgroundRect(self.windowSize, 60,self, color=QtCore.Qt.white)
         self.myRacket = Racket(self.windowSize,self.startDistance,self,QtCore.Qt.red)
         self.scoreText = TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]), [self.scenesize[0] - 100, -20], False, self, size=29)
@@ -356,6 +500,7 @@ class Scene(QtWidgets.QGraphicsScene):
         self.update()
         self.moveBall()
         self.checkCollision()
+        self.enemyRacket.move(np.array([self.ball.position[0], self.ball.position[1], self.enemyRacket.position[2]]))
 
     def mouseMoveEvent(self, event):
         if self.moveracket :
@@ -396,6 +541,7 @@ class Scene(QtWidgets.QGraphicsScene):
         ballX = self.ball.position[0]
         ballY = self.ball.position[1]
         ballZ = self.ball.position[2]
+        # print(ballZ)
         start = self.startDistance
         meta = self.endDistance
         width = self.perspectiveRects[0].width
@@ -430,6 +576,17 @@ class Scene(QtWidgets.QGraphicsScene):
             else:
                 self.ball.velocityVector[2] *= -1
                 self.view.myPoint = True
+
+        # obsX = self.obstacle.position[0]
+        # obsY = self.obstacle.position[1]
+        # obsZ = self.obstacle.position[2]
+        # velX = self.ball.velocityVector[0]
+        # velY = self.ball.velocityVector[1]
+        # velZ = self.ball.velocityVector[2]
+        # dim  = self.obstacle.dimension
+        # dimZ = self.obstacle.dimension * LENGTH_PARAM
+        #
+        # elif ballZ + rad > obsZ - dimZ and velZ > 0 and ballX - rad < obsX + dim and ballX + rad > obsX - dim and ballX - rad < obsX + dim and ballX + rad > obsX - dim
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

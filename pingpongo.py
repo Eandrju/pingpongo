@@ -31,6 +31,7 @@ class AThread(QtCore.QThread):
     changep1score = QtCore.pyqtSignal()
     changep2score = QtCore.pyqtSignal()
     sendSignal = QtCore.pyqtSignal()
+    sceneSignal = QtCore.pyqtSignal()
 
     def __init__(self, view,gui):
         super().__init__()
@@ -43,6 +44,9 @@ class AThread(QtCore.QThread):
         self.changep1score.connect(self.gui.changep1)
         self.changep2score.connect(self.gui.changep2)
 
+    @QtCore.pyqtSignal()
+    def connectsignal(self):
+        self.sceneSignal.connect(self.gui.connThread.endscene)
 
     def updateCounters(self):
         self.changep1score.emit()
@@ -56,6 +60,7 @@ class AThread(QtCore.QThread):
 
         while 1:
             if self.view.myPoint == True:
+                self.sceneSignal.emit()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[1]  = self.view.score[1] + 1
                 self.updateCounters()
@@ -64,6 +69,7 @@ class AThread(QtCore.QThread):
                 self.ingame = False
 
             elif self.view.enemyPoint == True:
+                self.sceneSignal.emit()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[0]  = self.view.score[0] + 1
                 self.updateCounters()
@@ -76,6 +82,7 @@ class AThread(QtCore.QThread):
                 self.view.setScene(self.scene)
                 self.view.restart = False
                 self.ingame = True
+                self.sceneSignal.emit()
 
             if self.ingame:
                 self.scene.run()
@@ -340,16 +347,18 @@ class Scene(QtWidgets.QGraphicsScene):
     def updatePaddleNet(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-        self.enemyRacket.position = data
+        self.enemyRacket.position = data[0]
+        self.enemyRacket.velocity = data[1]
 
     @QtCore.pyqtSlot()
     def updatePaddleBall(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
         self.enemyRacket.position = data[0]
-        self.ball.velocityVector = data[1]
-        self.ball.position = data[2]
-        self.ball.rotationVector = data[3]
+        self.enemyRacket.velocity = data[1]
+        self.ball.velocityVector = data[2]
+        self.ball.position = data[3]
+        self.ball.rotationVector = data[4]
 
 
     def run(self):

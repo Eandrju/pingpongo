@@ -22,6 +22,8 @@ class SendThread(QtCore.QThread):
             self.updateElements.connect(lambda x=self.data:self.scene.updatePaddleNet(x))
         self.createdSignal.connect(self.gui.gameLoop.connectsignal)
         self.restarSignal.connect(self.gui.gameLoop.restart_scene)
+        if self.client:
+            self.conn.send('init'.encode())
 
     def afterinit(self):
         self.createdSignal.emit()
@@ -62,7 +64,8 @@ class SendThread(QtCore.QThread):
                 self.updateElements.emit()
             except:
                 self.boxprint("oops")
-
+        elif 'init' in x.decode():
+            pass
         else:
             self.boxprint("Something went tragically wrong")
         self.data = None
@@ -91,12 +94,16 @@ class SendThread(QtCore.QThread):
             while flag:
                 x = self.conn.recv(1024)
                 if "kafel" in x.decode() :
-                    self.conn.send("kafel".encode())
+                    self.conn.send("kufel".encode())
                     self.boxprint(x.decode())
                     flag = False
                     self.sc = True
                     self.gui.gameLoop.ingame = True
-
+                elif "kufel" in x.decode():
+                    self.boxprint(x.decode())
+                    flag = False
+                    self.sc = True
+                    self.gui.gameLoop.ingame = True
         else:
             self.sc = False
 

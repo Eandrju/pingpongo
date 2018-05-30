@@ -28,6 +28,7 @@ class Window(QtWidgets.QMainWindow):
         self.connected = False
         self.connTry = False
         self.connThread = None
+        self.addr = None
 
         self.graphicsView.setMouseTracking(True)
         self.graphicsView.scenesize = (pingpongo.WINDOW_WIDTH / 15.0 * 14.0, pingpongo.WINDOW_HEIGHT * 0.95)
@@ -65,7 +66,8 @@ class Window(QtWidgets.QMainWindow):
         self.gameLoop.start()
         time.sleep(0.1)
         if self.connected:
-            self.connThread = sendthread.SendThread(self.graphicsView.graphicsscene,self.client,self.conn)
+            self.connThread = sendthread.SendThread(self.graphicsView.graphicsscene,self.client,self.conn,self)
+            self.connThread.afterinit()
             self.connThread.start()
 
     def setupConn(self):
@@ -86,16 +88,20 @@ class Window(QtWidgets.QMainWindow):
         self.connStatus.append("Server accepted a connection from {}:{}".format(self.addr, self.port))
         self.connected = True
 
+
+
     def establishConn(self):
+        print(self.connTry,self.server,self.client)
         if self.connTry and self.server:
             try:
+                del self.listenthread
                 self.socket.close()
                 self.connStatus.append("Successfully closed socket")
             except Exception as e:
                 self.connStatus.append("Socket error: {}".format(e))
             self.connTry = False
-            return
-        if self.client and not self.connTry:
+
+        elif self.client and not self.connTry:
             try:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.connect((self.ip,self.port))
@@ -111,8 +117,8 @@ class Window(QtWidgets.QMainWindow):
                 self.socket.listen(10)
                 self.connStatus.append("Created server on port {}".format(self.port))
                 self.connTry = True
-                thread = ListenThread(self ,self.socket)
-                thread.start()
+                self.listenthread = ListenThread(self ,self.socket)
+                self.listenthread.start()
 
 
             except Exception as e:
@@ -134,7 +140,7 @@ class ListenThread(QtCore.QThread):
             self.conn,self.addr = self.socket.accept()
         except Exception as e :
             print(e)
-
+            return
         self.acceptedSignal.connect(lambda x=(self.conn, self.addr): self.gui.serverAccepted(x))
         self.acceptedSignal.emit()
 
@@ -144,9 +150,7 @@ class Handshake(QtCore.QThread):
         super().__init__()
         self.gui = gui
         self.conn = conn
-        print("poop")
         self.startGame.connect(self.gui.startgame)
-        print('no way its this')
 
     def run(self):
         self.conn.send("poop".encode())

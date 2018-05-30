@@ -32,28 +32,32 @@ class AThread(QtCore.QThread):
     changep2score = QtCore.pyqtSignal()
     sendSignal = QtCore.pyqtSignal()
     sceneSignal = QtCore.pyqtSignal()
+    restartSignal = QtCore.pyqtSignal()
 
-    def __init__(self, view,gui):
+    def __init__(self, view, gui):
         super().__init__()
         self.view = view
         self.gui = gui
         self.scene = view.graphicsscene
         self.ingame = True
+        self.file = open('enough.csv','w')
         self.enemyendscene = EndScreen(self.view.scenesize, view,"Point player one")
         self.myendscene = EndScreen(self.view.scenesize, view,"Point player two")
         self.changep1score.connect(self.gui.changep1)
         self.changep2score.connect(self.gui.changep2)
 
-    @QtCore.pyqtSignal()
+    @QtCore.pyqtSlot()
     def connectsignal(self):
         self.sceneSignal.connect(self.gui.connThread.endscene)
+        #self.restartSignal.connect(self.gui.connThread.restartHandshake)
 
     def updateCounters(self):
         self.changep1score.emit()
         self.changep2score.emit()
         pass
 
-    def updateEnemy(self,data):
+    @QtCore.pyqtSlot()
+    def restart_scene(self):
         pass
 
     def run(self):
@@ -81,12 +85,14 @@ class AThread(QtCore.QThread):
                 self.scene.restart()
                 self.view.setScene(self.scene)
                 self.view.restart = False
-                self.ingame = True
                 self.sceneSignal.emit()
+                if not self.gui.connected:
+                    self.ingame = True
 
             if self.ingame:
                 self.scene.run()
             time.sleep(1./120)
+
 
 class Racket(QtWidgets.QGraphicsItem):
 
@@ -347,28 +353,41 @@ class Scene(QtWidgets.QGraphicsScene):
     def updatePaddleNet(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-        self.enemyRacket.position = data[0]
-        self.enemyRacket.velocity = data[1]
+        #print("####################", data)
+        data[0][0] = - data[0][0]
+        data[0][2] = self.endDistance
+        self.enemyRacket.move(np.array(data[0]))
+        self.enemyRacket.velocity = np.array(data[1])
 
     @QtCore.pyqtSlot()
     def updatePaddleBall(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-        self.enemyRacket.position = data[0]
-        self.enemyRacket.velocity = data[1]
-        self.ball.velocityVector = data[2]
-        self.ball.position = data[3]
-        self.ball.rotationVector = data[4]
+        #print("####################",data)
+        data[0][0] = - data[0][0]
+        data[0][2] = self.endDistance
+        data[3][0] = - data[3][0]
+        data[3][2] = self.endDistance - data[3][2] + self.startDistance
+        data[1][0] = - data[1][0]
+        data[2][0] = - data[2][0]
+        data[2][2] = - data[2][2]
+        self.enemyRacket.move(np.array(data[0]))
+        self.enemyRacket.velocity = np.array(data[1])
+        self.ball.velocityVector = np.array(data[2])
+        self.ball.position = np.array(data[3])
+        self.ball.rotationVector = np.array(data[4])
 
 
     def run(self):
         self.update()
         self.moveBall()
         self.checkCollision()
+        #print(self.myRacket.position,self.enemyRacket.position)
 
     def mouseMoveEvent(self, event):
         if self.moveracket :
-            self.myRacket.move(np.array([event.scenePos().x() - self.origin[0], event.scenePos().y() - self.origin[1], self.myRacket.position[2]]))
+            self.myRacket.move(np.array([event.scenePos().x() - self.origin[0],
+                                         event.scenePos().y() - self.origin[1], self.myRacket.position[2]]))
 
     def mousePressEvent(self, e):
         if self.moveracket:
@@ -424,7 +443,7 @@ class Scene(QtWidgets.QGraphicsScene):
                 # print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype)
                 self.ball.velocityVector[2] *= -1
                 self.ball.rotationVector += (np.array([-self.myRacket.velocity[1],  self.myRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS)
-                print(np.linalg.norm(self.ball.rotationVector))
+                #print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= 0
                 self.view.enemyPoint = True
@@ -432,10 +451,10 @@ class Scene(QtWidgets.QGraphicsScene):
         elif ballZ  > meta:
             rect = self.enemyRacket.getRacketRect()
             if ballX > rect[0] and ballX < rect[0]+rect[2] and ballY > rect[1] and ballY < rect[1]+rect[3]:
-                print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype, self.enemyRacket.velocity.dtype)
+                #print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype, self.enemyRacket.velocity.dtype)
                 self.ball.velocityVector[2] *= -1
                 self.ball.rotationVector += (np.array([-self.enemyRacket.velocity[1],  self.enemyRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS )
-                print(np.linalg.norm(self.ball.rotationVector))
+                #print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= -1
                 self.view.myPoint = True

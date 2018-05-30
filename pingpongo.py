@@ -10,11 +10,11 @@ PERSPECTIVE_PARAMETER = 0.8   # change it when u notice that ball looks creepy
 PLANE_POSITION= 2000
 START_POSITION = 2200
 END_POSITION = 9000
-BALL_SPEED = 40.0
+BALL_SPEED = 50.0
 BALL_SPIN_PARAMETER = 100    # the lower parameter is, the greater influence of spin on trajectory
 BALL_SPIN_PARAMETER_DOS = 50   # more spin, more fun!
 BALL_PRECISION = 25
-MAX_SPIN = 0.15
+MAX_SPIN = 0.3
 RACKET_WIDTH = 300
 RACKET_HEIGHT = 200
 LENGTH_PARAM = 3
@@ -563,6 +563,20 @@ class Ball(QtWidgets.QGraphicsItem):
 #         self.setCentralWidget(self.graphicsView)
 #         self.show()
 
+class Bot:
+    def __init__(self, racket, velocity):
+        self.racket = racket
+        self.velocity = velocity
+
+    def timeToMakeAMove(self, ballPosition):
+        vector = ballPosition[:2] - self.racket.position[:2]
+        if np.linalg.norm(vector) > self.velocity:
+            vector = vector / np.linalg.norm(vector)
+            vector = vector * self.velocity
+        newX = self.racket.position[0] + vector[0]
+        newY = self.racket.position[1] + vector[1]
+        self.racket.move(np.array([newX, newY,self.racket.position[2]]))
+
 
 class Scene(QtWidgets.QGraphicsScene):
     def __init__(self,size,view, canIcreteStars):
@@ -584,6 +598,7 @@ class Scene(QtWidgets.QGraphicsScene):
         self.enemyRacket = Racket(self.windowSize, self.endDistance, self, QtCore.Qt.blue)
         self.shittyLines = JustSomeLines(self.windowSize, self)
         self.ball = Ball(self.windowSize, 60, self)
+        self.bot = Bot(self.enemyRacket, 10)
         # self.obstacle = Obstacle(self.windowSize, [200, 200, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)], self, QtCore.Qt.gray, 200)
         starPosition = None
         if canIcreteStars:
@@ -594,7 +609,7 @@ class Scene(QtWidgets.QGraphicsScene):
         self.ballRect = BackgroundRect(self.windowSize, 60,self, color=QtCore.Qt.white)
         self.myRacket = Racket(self.windowSize,self.startDistance,self,QtCore.Qt.red)
         self.scoreText = TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]), [self.scenesize[0] - 100, -20], False, self, size=29)
-        self.scoreText.setPlainText("censore")
+        self.scoreText.setPlainText("kuśka")
         self.scoreText.setPos(self.scenesize[0] - 100, -20)
         self.addItem(self.scoreText)
         self.myPoint = False
@@ -628,7 +643,8 @@ class Scene(QtWidgets.QGraphicsScene):
         self.update()
         self.moveBall()
         self.checkCollision()
-        self.enemyRacket.move(np.array([self.ball.position[0], self.ball.position[1], self.enemyRacket.position[2]]))
+        self.bot.timeToMakeAMove(self.ball.position)
+        # self.enemyRacket.move(np.array([self.ball.position[0], self.ball.position[1], self.enemyRacket.position[2]]))
 
     def mouseMoveEvent(self, event):
         if self.moveracket :
@@ -688,7 +704,7 @@ class Scene(QtWidgets.QGraphicsScene):
             if ballX > rect[0] and ballX < rect[0]+rect[2] and ballY > rect[1] and ballY < rect[1]+rect[3]:
                 # print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype)
                 self.ball.velocityVector[2] *= -1
-                self.ball.rotationVector += (np.array([-self.myRacket.velocity[1],  self.myRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS)
+                self.ball.rotationVector = 0.2 * self.ball.rotationVector + (np.array([-self.myRacket.velocity[1],  self.myRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS)
                 print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= 0
@@ -699,7 +715,7 @@ class Scene(QtWidgets.QGraphicsScene):
             if ballX > rect[0] and ballX < rect[0]+rect[2] and ballY > rect[1] and ballY < rect[1]+rect[3]:
                 print(self.ball.rotationVector.dtype,  self.myRacket.velocity.dtype, self.enemyRacket.velocity.dtype)
                 self.ball.velocityVector[2] *= -1
-                self.ball.rotationVector += (np.array([-self.enemyRacket.velocity[1],  self.enemyRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS )
+                self.ball.rotationVector = 0.2 * self.ball.rotationVector + (np.array([-self.enemyRacket.velocity[1],  self.enemyRacket.velocity[0], 0]) / BALL_SPIN_PARAMETER_DOS )
                 print(np.linalg.norm(self.ball.rotationVector))
             else:
                 self.ball.velocityVector[2] *= -1

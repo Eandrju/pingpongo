@@ -20,6 +20,7 @@ class Window(QtWidgets.QMainWindow):
         self.connButton.clicked.connect(self.setupConn)
         self.testconnButton.clicked.connect(self.establishConn)
 
+
         self.ip = socket.gethostname()
         self.port = 10010
         self.server = False
@@ -34,12 +35,15 @@ class Window(QtWidgets.QMainWindow):
         self.graphicsView.scenesize = (pingpongo.WINDOW_WIDTH / 15.0 * 14.0, pingpongo.WINDOW_HEIGHT * 0.95)
         self.graphicsView.score = [0, 0]
         self.graphicsView.moveracket = False
+        self.graphicsView.restart = False
         self.graphicsView.myPoint = False
         self.graphicsView.enemyPoint = False
-        self.graphicsView.restart = False
-        self.graphicsView.graphicsscene = pingpongo.Scene(self.graphicsView.scenesize, self.graphicsView)
+        self.graphicsView.starForMe = False
+        self.graphicsView.starForEnemy = False
+        self.graphicsView.graphicsscene = pingpongo.Scene(self.graphicsView.scenesize, self.graphicsView, canIcreteStars=True)
         self.graphicsView.setScene(self.graphicsView.graphicsscene)
         self.gameLoop = pingpongo.AThread(self.graphicsView, self)
+        self.startclicked()               #TODO hardcoded start
 
         self.show()
 
@@ -168,5 +172,5 @@ if __name__ == '__main__':
     app.exec_()
     while 1:
         continue
-    sys.exit(app.exec_())
+        sys.exit(app.exec_())
 

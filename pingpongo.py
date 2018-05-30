@@ -102,12 +102,10 @@ class AThread(QtCore.QThread):
             time.sleep(1./120)
 
 class Star(QtWidgets.QGraphicsItem):
-    def __init__(self, windowSize,scene, color, radius, offsetAngle):
+    def __init__(self, windowSize,scene, color, radius, offsetAngle, position):
         super().__init__()
         self.windowSize = windowSize
-        newX = np.random.randint(-windowSize[0] // 2 + STAR_RADIUS, windowSize[0] // 2 - STAR_RADIUS)
-        newY = np.random.randint(-windowSize[1] // 2 + STAR_RADIUS, windowSize[1] // 2 - STAR_RADIUS)
-        self.position = np.array([newX, newY, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)])
+        self.position = position
         self.radius = radius
         self.offsetAngle = offsetAngle
         self.nodes = None
@@ -118,10 +116,8 @@ class Star(QtWidgets.QGraphicsItem):
         self.origin = windowSize / 2
         scene.addItem(self)
 
-    def move(self):
-        newX = np.random.randint(-self.windowSize[0] // 2 + STAR_RADIUS, self.windowSize[0] // 2 - STAR_RADIUS)
-        newY = np.random.randint(-self.windowSize[1] // 2 + STAR_RADIUS, self.windowSize[1] // 2 - STAR_RADIUS)
-        self.position = np.array([newX, newY, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)])
+    def move(self, newPosition):
+        self.position = newPosition
         self.createNodes()
         self.projectedNodes = magicPerspectiveProjector(self.nodes)
 
@@ -589,8 +585,12 @@ class Scene(QtWidgets.QGraphicsScene):
         self.shittyLines = JustSomeLines(self.windowSize, self)
         self.ball = Ball(self.windowSize, 60, self)
         # self.obstacle = Obstacle(self.windowSize, [200, 200, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)], self, QtCore.Qt.gray, 200)
+        starPosition = None
         if canIcreteStars:
-            self.star = Star(self.windowSize, self, QtGui.QColor(255,140,0), 50, 0.1)
+            newX = np.random.randint(-self.windowSize[0] // 2 + STAR_RADIUS, self.windowSize[0] // 2 - STAR_RADIUS)
+            newY = np.random.randint(-self.windowSize[1] // 2 + STAR_RADIUS, self.windowSize[1] // 2 - STAR_RADIUS)
+            starPosition = np.array([newX, newY, PERSPECTIVE_PARAMETER * (START_POSITION + (END_POSITION - START_POSITION) / 2)])
+        self.star = Star(self.windowSize, self, QtGui.QColor(255,140,0), 50, 0.1, starPosition)
         self.ballRect = BackgroundRect(self.windowSize, 60,self, color=QtCore.Qt.white)
         self.myRacket = Racket(self.windowSize,self.startDistance,self,QtCore.Qt.red)
         self.scoreText = TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]), [self.scenesize[0] - 100, -20], False, self, size=29)
@@ -719,7 +719,12 @@ class Scene(QtWidgets.QGraphicsScene):
                 else:
                     print('star for enemy!!!!!!!!!!!!!!!!!!!')
                     self.view.starForEnemy = True
-                self.star.move()
+                starPosition = None
+                if self.canIcreteStars:
+                    newX = np.random.randint(-self.windowSize[0] // 2 + STAR_RADIUS,   self.windowSize[0] // 2 - STAR_RADIUS)
+                    newY = np.random.randint(-self.windowSize[1] // 2 + STAR_RADIUS,  self.windowSize[1] // 2 - STAR_RADIUS)
+                    starPosition = np.array([newX, newY, PERSPECTIVE_PARAMETER * (START_POSITION + (END_POSITION - START_POSITION) / 2)])
+                self.star.move(starPosition)
 
 
         #OBSTACLE COLLISION

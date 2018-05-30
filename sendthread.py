@@ -49,14 +49,6 @@ class SendThread(QtCore.QThread):
         self.conn.send(str(send_data).encode())
 
     def serverfunc(self):
-        send_data = []
-        send_data.append(list(self.scene.myRacket.position))
-        send_data.append(list(self.scene.myRacket.velocity))
-        send_data.append(list(self.scene.ball.velocityVector))
-        send_data.append(list(self.scene.ball.position))
-        send_data.append(list(self.scene.ball.rotationVector))
-        data = str(send_data).encode()
-        self.conn.send(data)
         x = self.conn.recv(1024)
         if 'kafel' in x.decode():
             self.boxprint("Theres some shit leftover{}".format(x.decode()))
@@ -74,6 +66,15 @@ class SendThread(QtCore.QThread):
         else:
             self.boxprint("Something went tragically wrong")
         self.data = None
+        send_data = []
+        send_data.append(list(self.scene.myRacket.position))
+        send_data.append(list(self.scene.myRacket.velocity))
+        send_data.append(list(self.scene.ball.velocityVector))
+        send_data.append(list(self.scene.ball.position))
+        send_data.append(list(self.scene.ball.rotationVector))
+        data = str(send_data).encode()
+        self.conn.send(data)
+
 
     def boxprint(self,st):
         self.gui.connStatus.append(st)

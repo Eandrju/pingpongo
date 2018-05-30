@@ -28,11 +28,22 @@ class SendThread(QtCore.QThread):
 
     def clientfunc(self):
         x = self.conn.recv(1024)
-        if '[' in x.decode():
-            self.data = ast.literal_eval(x.decode())
-            self.updateElements.disconnect()
-            self.updateElements.connect(lambda x=self.data: self.scene.updatePaddleBall(x))
-            self.updateElements.emit()
+        if 'kafel' in x.decode():
+            self.boxprint("Theres some shit leftover".format(x.decode()))
+            #self.conn.send('kafel'.encode())
+        elif '[' in x.decode() and 'kafel' not in x.decode():
+            try:
+                self.data = ast.literal_eval(x.decode())
+                self.updateElements.disconnect()
+                self.updateElements.connect(lambda x=self.data: self.scene.updatePaddleBall(x))
+                self.updateElements.emit()
+            except:
+                self.boxprint("oops")
+
+
+
+        else:
+            self.boxprint("Something went tragically wrong")
         self.data = None
         send_data = [list(self.scene.myRacket.position), list(self.scene.myRacket.velocity)]
         self.conn.send(str(send_data).encode())
@@ -47,32 +58,46 @@ class SendThread(QtCore.QThread):
         data = str(send_data).encode()
         self.conn.send(data)
         x = self.conn.recv(1024)
-        if '[' in x.decode():
-            self.data = ast.literal_eval(x.decode())
-            self.updateElements.disconnect()
-            self.updateElements.connect(lambda x=self.data: self.scene.updatePaddleNet(x))
-            self.updateElements.emit()
+        if 'kafel' in x.decode():
+            self.boxprint("Theres some shit leftover{}".format(x.decode()))
+            #self.conn.send('kafel'.encode())
+
+        elif '[' in x.decode() and 'kafel' not in x.decode():
+            try:
+                self.data = ast.literal_eval(x.decode())
+                self.updateElements.disconnect()
+                self.updateElements.connect(lambda x=self.data: self.scene.updatePaddleNet(x))
+                self.updateElements.emit()
+            except:
+                self.boxprint("oops")
+
+        else:
+            self.boxprint("Something went tragically wrong")
         self.data = None
 
     def boxprint(self,st):
-        self.gui.connStatus.append("st")
+        self.gui.connStatus.append(st)
 
     @QtCore.pyqtSlot()
     def endscene(self):
-        self.boxprint("AHHHHHH")
+        self.boxprint("AHHHHHH {}".format(self.sc))
         if not self.sc:
             flag = True
-
-            while (flag):
-                self.conn.send("kafel".encode())
+            if self.client :
+                self.conn.send("kafel-c".encode())
+            else:
+                self.conn.send("kafel-s".encode())
+            while flag:
                 x = self.conn.recv(1024)
-                if "kafel" in x.decode():
+                if "kafel" in x.decode() :
+                    self.conn.send("kafel".encode())
+                    self.boxprint(x.decode())
                     flag = False
                     self.sc = True
                     self.gui.gameLoop.ingame = True
+
         else:
             self.sc = False
-
 
     def run(self):
         while 1:

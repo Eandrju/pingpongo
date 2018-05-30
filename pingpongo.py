@@ -52,6 +52,7 @@ class AThread(QtCore.QThread):
         self.myendscene = EndScreen(self.view.scenesize, view,"Point player two")
         self.changep1score.connect(self.gui.changep1)
         self.changep2score.connect(self.gui.changep2)
+        self.scene.connected = self.gui.connected
 
     @QtCore.pyqtSlot()
     def connectsignal(self):
@@ -71,6 +72,7 @@ class AThread(QtCore.QThread):
 
         while 1:
             if self.view.myPoint == True:
+                self.sceneSignal.emit()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[1]  = self.view.score[1] + 1
                 self.updateCounters()
@@ -79,21 +81,19 @@ class AThread(QtCore.QThread):
                 self.ingame = False
 
             elif self.view.enemyPoint == True:
+                self.sceneSignal.emit()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[0]  = self.view.score[0] + 1
                 self.updateCounters()
                 self.view.setScene(self.enemyendscene)
                 self.view.enemyPoint = False
                 self.ingame = False
-            # print(self.view.starForMe)
 
             if self.view.starForEnemy == True:
-
                 print('point for me !!!')
                 self.view.score[0]  = self.view.score[0] + 1
                 self.updateCounters()
                 self.view.starForEnemy = False
-
 
             if self.view.starForMe == True:
                 self.view.score[1]  = self.view.score[1] + 1
@@ -107,8 +107,6 @@ class AThread(QtCore.QThread):
                 self.sceneSignal.emit()
                 if not self.gui.connected:
                     self.ingame = True
-
-
             if self.ingame:
                 self.scene.run()
             time.sleep(1./120)
@@ -183,9 +181,6 @@ class Obstacle(QtWidgets.QGraphicsItem):
 
         def draw(self, qp):
             qp.drawConvexPolygon(self.poly[0], self.poly[1], self.poly[2], self.poly[3])
-            # qp.drawLine(self.line1[0], self.line1[1], self.line1[2], self.line1[3])
-            # qp.drawLine(self.line2[0], self.line2[1], self.line2[2], self.line2[3])
-
 
     def __init__(self, windowSize, position,scene, color,  dimension):
         super().__init__()
@@ -575,7 +570,6 @@ class Scene(QtWidgets.QGraphicsScene):
         self.shittyLines = JustSomeLines(self.windowSize, self)
         self.ball = Ball(self.windowSize, 60, self)
         self.bot = Bot(self.enemyRacket, 10)
-        # self.obstacle = Obstacle(self.windowSize, [200, 200, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)], self, QtCore.Qt.gray, 200)
         starPosition = None
         if canIcreteStars:
             newX = np.random.randint(-self.windowSize[0] // 2 + STAR_RADIUS, self.windowSize[0] // 2 - STAR_RADIUS)
@@ -591,6 +585,7 @@ class Scene(QtWidgets.QGraphicsScene):
         self.myPoint = False
         self.enemyPoint = False
         self.moveracket = False
+        self.connected = False
         self.canIcreteStars = canIcreteStars
 
 
@@ -603,8 +598,6 @@ class Scene(QtWidgets.QGraphicsScene):
     def updatePaddleNet(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-
-        #print("####################", data)
         data[0][0] = - data[0][0]
         data[0][2] = self.endDistance
         self.enemyRacket.move(np.array(data[0]))
@@ -614,8 +607,6 @@ class Scene(QtWidgets.QGraphicsScene):
     def updatePaddleBall(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-
-        #print("####################",data)
         data[0][0] = - data[0][0]
         data[0][2] = self.endDistance
         data[3][0] = - data[3][0]
@@ -629,14 +620,12 @@ class Scene(QtWidgets.QGraphicsScene):
         self.ball.position = np.array(data[3])
         self.ball.rotationVector = np.array(data[4])
 
-
-
     def run(self):
         self.update()
         self.moveBall()
         self.checkCollision()
-        self.bot.timeToMakeAMove(self.ball.position)
-
+        if self.connected:
+            self.bot.timeToMakeAMove(self.ball.position)
 
     def mouseMoveEvent(self, event):
         if self.moveracket :

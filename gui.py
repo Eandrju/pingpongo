@@ -20,7 +20,6 @@ class Window(QtWidgets.QMainWindow):
         self.connButton.clicked.connect(self.setupConn)
         self.testconnButton.clicked.connect(self.establishConn)
 
-
         self.ip = socket.gethostname()
         self.port = 10010
         self.server = False
@@ -43,10 +42,8 @@ class Window(QtWidgets.QMainWindow):
         self.graphicsView.graphicsscene = pingpongo.Scene(self.graphicsView.scenesize, self.graphicsView, canIcreteStars=True)
         self.graphicsView.setScene(self.graphicsView.graphicsscene)
         self.gameLoop = pingpongo.AThread(self.graphicsView, self)
-        self.startclicked()               #TODO hardcoded start
 
         self.show()
-
 
     @QtCore.pyqtSlot()
     def changep1(self):
@@ -55,8 +52,6 @@ class Window(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def changep2(self):
         self.p2Score.setPlainText(str(self.graphicsView.score[1]))
-
-
 
     def startclicked(self):
         if self.connected:
@@ -92,8 +87,6 @@ class Window(QtWidgets.QMainWindow):
             self.conn,self.addr = tup
         self.connStatus.append("Server accepted a connection from {}:{}".format(self.addr, self.port))
         self.connected = True
-
-
 
     def establishConn(self):
         print(self.connTry,self.server,self.client)
@@ -163,7 +156,6 @@ class Handshake(QtCore.QThread):
         if x == "poop":
             print("started from handshake")
             self.startGame.emit()
-
 
 
 if __name__ == '__main__':

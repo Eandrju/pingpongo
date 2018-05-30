@@ -18,6 +18,7 @@ MAX_SPIN = 0.15
 RACKET_WIDTH = 300
 RACKET_HEIGHT = 200
 LENGTH_PARAM = 3
+STAR_RADIUS = 100
 
 def magicPerspectiveProjector(points, distanceFromPlane = PLANE_POSITION* PERSPECTIVE_PARAMETER):  # points -> ndarray with shape [x, 3]
     try:
@@ -36,7 +37,6 @@ class AThread(QtCore.QThread):
     changep1score = QtCore.pyqtSignal()
     changep2score = QtCore.pyqtSignal()
     sendSignal = QtCore.pyqtSignal()
-    sceneSignal = QtCore.pyqtSignal()
 
     def __init__(self, view,gui):
         super().__init__()
@@ -49,9 +49,6 @@ class AThread(QtCore.QThread):
         self.changep1score.connect(self.gui.changep1)
         self.changep2score.connect(self.gui.changep2)
 
-    @QtCore.pyqtSignal()
-    def connectsignal(self):
-        self.sceneSignal.connect(self.gui.connThread.endscene)
 
     def updateCounters(self):
         self.changep1score.emit()
@@ -65,7 +62,6 @@ class AThread(QtCore.QThread):
 
         while 1:
             if self.view.myPoint == True:
-                self.sceneSignal.emit()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[1]  = self.view.score[1] + 1
                 self.updateCounters()
@@ -74,24 +70,99 @@ class AThread(QtCore.QThread):
                 self.ingame = False
 
             elif self.view.enemyPoint == True:
-                self.sceneSignal.emit()
                 self.view.setCursor(QtCore.Qt.ArrowCursor)
                 self.view.score[0]  = self.view.score[0] + 1
                 self.updateCounters()
                 self.view.setScene(self.enemyendscene)
                 self.view.enemyPoint = False
                 self.ingame = False
+            # print(self.view.starForMe)
+
+            if self.view.starForEnemy == True:
+
+                print('point for me !!!')
+                self.view.score[0]  = self.view.score[0] + 1
+                self.updateCounters()
+                self.view.starForEnemy = False
+
+
+            if self.view.starForMe == True:
+                self.view.score[1]  = self.view.score[1] + 1
+                self.updateCounters()
+                self.view.starForMe = False
 
             if self.view.restart:
                 self.scene.restart()
                 self.view.setScene(self.scene)
                 self.view.restart = False
                 self.ingame = True
-                self.sceneSignal.emit()
 
             if self.ingame:
                 self.scene.run()
             time.sleep(1./120)
+
+class Star(QtWidgets.QGraphicsItem):
+    def __init__(self, windowSize,scene, color, radius, offsetAngle):
+        super().__init__()
+        self.windowSize = windowSize
+        newX = np.random.randint(-windowSize[0] // 2 + STAR_RADIUS, windowSize[0] // 2 - STAR_RADIUS)
+        newY = np.random.randint(-windowSize[1] // 2 + STAR_RADIUS, windowSize[1] // 2 - STAR_RADIUS)
+        self.position = np.array([newX, newY, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)])
+        self.radius = radius
+        self.offsetAngle = offsetAngle
+        self.nodes = None
+        self.projectedNodes = None
+        self.setZValue(1 / self.position[2])
+        self.createNodes()
+        self.color = color
+        self.origin = windowSize / 2
+        scene.addItem(self)
+
+    def move(self):
+        newX = np.random.randint(-self.windowSize[0] // 2 + STAR_RADIUS, self.windowSize[0] // 2 - STAR_RADIUS)
+        newY = np.random.randint(-self.windowSize[1] // 2 + STAR_RADIUS, self.windowSize[1] // 2 - STAR_RADIUS)
+        self.position = np.array([newX, newY, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)])
+        self.createNodes()
+        self.projectedNodes = magicPerspectiveProjector(self.nodes)
+
+    def createNodes(self):
+        buffer = []
+        r = self.radius
+        R = self.radius * 2.6180388
+        for index, alpha in enumerate(np.linspace(self.offsetAngle, 2 * np.pi + self.offsetAngle, 10, endpoint=False)):
+            print(alpha)
+            if index % 2 == 0:
+                buffer.append([np.cos(alpha) * R + self.position[0], np.sin(alpha)* R + self.position[1], self.position[2]])
+            else:
+                buffer.append([np.cos(alpha) * r + self.position[0], np.sin(alpha)* r + self.position[1], self.position[2]])
+        self.nodes = np.array(buffer)
+        self.projectedNodes = magicPerspectiveProjector(self.nodes)
+
+    def boundingRect(self):
+        return QtCore.QRectF(self.origin[0] + self.position[0] - self.radius * 2,
+                             self.origin[1] + self.position[1] - self.radius * 2,
+                             self.radius * 4, self.radius * 4)
+
+    def paint(self, qp, o, widgets=None):
+        pen = QtGui.QPen(self.color, 2, QtCore.Qt.SolidLine)
+        brush = QtGui.QBrush(self.color)
+
+        qp.setPen(pen)
+        qp.setBrush(brush)
+        pN = self.projectedNodes
+        o = self.origin
+
+        qp.drawPolygon(QtCore.QPoint(pN[0][0] + o[0], pN[0][1] + o[1]),
+                       QtCore.QPoint(pN[1][0] + o[0], pN[1][1] + o[1]),
+                       QtCore.QPoint(pN[2][0] + o[0], pN[2][1] + o[1]),
+                       QtCore.QPoint(pN[3][0] + o[0], pN[3][1] + o[1]),
+                       QtCore.QPoint(pN[4][0] + o[0], pN[4][1] + o[1]),
+                       QtCore.QPoint(pN[5][0] + o[0], pN[5][1] + o[1]),
+                       QtCore.QPoint(pN[6][0] + o[0], pN[6][1] + o[1]),
+                       QtCore.QPoint(pN[7][0] + o[0], pN[7][1] + o[1]),
+                       QtCore.QPoint(pN[8][0] + o[0], pN[8][1] + o[1]),
+                       QtCore.QPoint(pN[9][0] + o[0], pN[9][1] + o[1]))
+
 
 class Obstacle(QtWidgets.QGraphicsItem):
     class CubeSide:
@@ -119,7 +190,7 @@ class Obstacle(QtWidgets.QGraphicsItem):
         self.createNodes()
         self.setZValue(1 / self.position[2])
         scene.addItem(self)
-        
+
     def createNodes(self):
         x = self.position[0]
         y = self.position[1]
@@ -294,9 +365,53 @@ class Racket(QtWidgets.QGraphicsItem):
         qp.drawLine(self.origin[0] + (self.projectedNodes[0][0] + self.projectedNodes[2][0]) / 2, self.origin[1] + self.projectedNodes[0][1],
                     self.origin[0] + (self.projectedNodes[0][0] + self.projectedNodes[2][0]) / 2, self.origin[1] + self.projectedNodes[1][1])
 
+class JustSomeLines(QtWidgets.QGraphicsItem):
+    def __init__(self, windowSize,scene,color = QtCore.Qt.green,style=QtCore.Qt.SolidLine):
+        super().__init__()
+        self.origin = windowSize // 2
+        self.windowSize = windowSize
+        self.color = color
+        self.style = style
+        self.penWidth = 1
+        self.nodes = None
+        self.projectedNodes = None
+        self.createNodes()
+        scene.addItem(self)
+
+    def createNodes(self):
+        s = START_POSITION * PERSPECTIVE_PARAMETER
+        e = END_POSITION * PERSPECTIVE_PARAMETER
+        w = self.windowSize
+        self.nodes = np.array([[w[0] // 2, w[1] // 2, s],
+                               [w[0] // 2, w[1] // 2, e],
+                               [-w[0] // 2, w[1] // 2, s],
+                               [-w[0] // 2, w[1] // 2, e],
+                               [-w[0] // 2, -w[1] // 2, s],
+                               [-w[0] // 2, -w[1] // 2, e],
+                               [w[0] // 2, -w[1] // 2, s],
+                               [w[0] // 2, -w[1] // 2, e]]
+                              )
+        self.projectedNodes = magicPerspectiveProjector(self.nodes)
+
+    def boundingRect(self):
+        return QtCore.QRectF(0, 0, self.windowSize[0], self.windowSize[1])
+
+
+    def paint(self,p ,o ,widgets=None):
+        pen = QtGui.QPen(self.style)
+        pen.setColor(self.color)
+        pen.setWidth(self.penWidth)
+        p.setPen(pen)
+        o = self.origin
+        pN = self.projectedNodes
+
+        p.drawLine(pN[0][0] + o[0], pN[0][1] + o[1], pN[1][0] + o[0], pN[1][1] + o[1])
+        p.drawLine(pN[2][0] + o[0], pN[2][1] + o[1], pN[3][0] + o[0], pN[3][1] + o[1])
+        p.drawLine(pN[4][0] + o[0], pN[4][1] + o[1], pN[5][0] + o[0], pN[5][1] + o[1])
+        p.drawLine(pN[6][0] + o[0], pN[6][1] + o[1], pN[7][0] + o[0], pN[7][1] + o[1])
+
 
 class BackgroundRect(QtWidgets.QGraphicsItem):
-
     def __init__(self, windowSize, zPosition,scene,color = QtCore.Qt.green,style=QtCore.Qt.SolidLine):
         super().__init__()
         self.width = windowSize[0]
@@ -426,33 +541,35 @@ class Ball(QtWidgets.QGraphicsItem):
                                         QtCore.QPoint(points[i][j-1][0] + x0, points[i][j-1][1] + y0))
 
 
-class Game(QtWidgets.QGraphicsView):
-    def __init__(self, parent = None):
-        QtWidgets.QGraphicsView.__init__(self)
-        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
-        self.setMouseTracking(True)
-        self.scenesize = (WINDOW_WIDTH / 15.0 * 14.0, WINDOW_HEIGHT * 0.95)
-        self.score = [0, 0]
-        self.moveracket = False
-        self.myPoint = False
-        self.enemyPoint = False
-        self.restart = False
-        self.graphicsscene = Scene(self.scenesize,self)
-        self.setScene(self.graphicsscene)
+# class Game(QtWidgets.QGraphicsView):
+#     def __init__(self, parent = None):
+#         QtWidgets.QGraphicsView.__init__(self)
+#         self.starForMe = False
+#         self.starForEnemy = False
+#         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
+#         self.setMouseTracking(True)
+#         self.scenesize = (WINDOW_WIDTH / 15.0 * 14.0, WINDOW_HEIGHT * 0.95)
+#         self.score = [0, 0]
+#         self.moveracket = False
+#         self.myPoint = False
+#         self.enemyPoint = False
+#         self.restart = False
+#         self.graphicsscene = Scene(self.scenesize,self)
+#         self.setScene(self.graphicsscene)
 
 
-class App(QtWidgets.QMainWindow):
-    def __init__(self):
-        super(App,self).__init__()
-        self.setWindowTitle("pong")
-        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
-        self.graphicsView = Game()
-        self.setCentralWidget(self.graphicsView)
-        self.show()
+# class App(QtWidgets.QMainWindow):
+#     def __init__(self):
+#         super(App,self).__init__()
+#         self.setWindowTitle("pong")
+#         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
+#         self.graphicsView = Game()
+#         self.setCentralWidget(self.graphicsView)
+#         self.show()
 
 
 class Scene(QtWidgets.QGraphicsScene):
-    def __init__(self,size,view):
+    def __init__(self,size,view, canIcreteStars):
         super().__init__()
         self.scenesize = size
         self.view = view
@@ -469,8 +586,11 @@ class Scene(QtWidgets.QGraphicsScene):
         self.drawBackground(painter,QtCore.QRectF())
         self.createPerspectiveRects()
         self.enemyRacket = Racket(self.windowSize, self.endDistance, self, QtCore.Qt.blue)
+        self.shittyLines = JustSomeLines(self.windowSize, self)
         self.ball = Ball(self.windowSize, 60, self)
-        self.obstacle = Obstacle(self.windowSize, [-200, 200, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)], self, QtCore.Qt.gray, 100)
+        # self.obstacle = Obstacle(self.windowSize, [200, 200, PERSPECTIVE_PARAMETER*(START_POSITION + (END_POSITION - START_POSITION)/2)], self, QtCore.Qt.gray, 200)
+        if canIcreteStars:
+            self.star = Star(self.windowSize, self, QtGui.QColor(255,140,0), 50, 0.1)
         self.ballRect = BackgroundRect(self.windowSize, 60,self, color=QtCore.Qt.white)
         self.myRacket = Racket(self.windowSize,self.startDistance,self,QtCore.Qt.red)
         self.scoreText = TextItem("FUCK: {0} : {1}".format(self.view.score[0], self.view.score[1]), [self.scenesize[0] - 100, -20], False, self, size=29)
@@ -480,6 +600,7 @@ class Scene(QtWidgets.QGraphicsScene):
         self.myPoint = False
         self.enemyPoint = False
         self.moveracket = False
+        self.canIcreteStars = canIcreteStars
 
 
     def updateCounters(self):
@@ -491,18 +612,16 @@ class Scene(QtWidgets.QGraphicsScene):
     def updatePaddleNet(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-        self.enemyRacket.position = data[0]
-        self.enemyRacket.velocity = data[1]
+        self.enemyRacket.position = data
 
     @QtCore.pyqtSlot()
     def updatePaddleBall(self, data):
         if data is None:
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
         self.enemyRacket.position = data[0]
-        self.enemyRacket.velocity = data[1]
-        self.ball.velocityVector = data[2]
-        self.ball.position = data[3]
-        self.ball.rotationVector = data[4]
+        self.ball.velocityVector = data[1]
+        self.ball.position = data[2]
+        self.ball.rotationVector = data[3]
 
 
     def run(self):
@@ -586,6 +705,25 @@ class Scene(QtWidgets.QGraphicsScene):
                 self.ball.velocityVector[2] *= -1
                 self.view.myPoint = True
 
+        # STAR CAPTURE
+        if self.canIcreteStars:
+            starX = self.star.position[0]
+            starY = self.star.position[1]
+            starZ = self.star.position[2]
+            starR = self.star.radius * 2
+
+            if ballX - rad < starX + starR and ballX + rad > starX - starR and ballY - rad < starY + starR and ballY + rad > starY - starR and ballZ - rad < starZ + starR and ballZ + rad > starZ - starR:
+                if self.ball.velocityVector[2] > 0:
+                    print('star for me!!!!!!!!!!!!!!!!!!!')
+                    self.view.starForMe = True
+                else:
+                    print('star for enemy!!!!!!!!!!!!!!!!!!!')
+                    self.view.starForEnemy = True
+                self.star.move()
+
+
+        #OBSTACLE COLLISION
+
         # obsX = self.obstacle.position[0]
         # obsY = self.obstacle.position[1]
         # obsZ = self.obstacle.position[2]
@@ -595,11 +733,20 @@ class Scene(QtWidgets.QGraphicsScene):
         # dim  = self.obstacle.dimension
         # dimZ = self.obstacle.dimension * LENGTH_PARAM
         #
-        # elif ballZ + rad > obsZ - dimZ and velZ > 0 and ballX - rad < obsX + dim and ballX + rad > obsX - dim and ballX - rad < obsX + dim and ballX + rad > obsX - dim
+        # if ballZ + rad > obsZ - dimZ and ballZ - rad < obsZ + dimZ and ballX < obsX + dim and ballX > obsX - dim and ballY < obsY + dim and ballY > obsY - dim:
+        #     self.ball.velocityVector[2] *= -1
+        #
+        #
+        # if ballZ > obsZ - dimZ and ballZ < obsZ + dimZ and ballX - rad< obsX + dim and ballX + rad > obsX - dim and ballY < obsY + dim and ballY > obsY - dim:
+        #     self.ball.velocityVector[0] *= -1
+        #
+        #
+        # if ballZ > obsZ - dimZ and ballZ < obsZ + dimZ and ballX < obsX + dim and ballX > obsX - dim and ballY - rad < obsY + dim and ballY + rad > obsY - dim:
+        #     self.ball.velocityVector[1] *= -1
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    ex = App()
-    gameLoop = AThread(ex.graphicsView)
-    gameLoop.start()
-    sys.exit(app.exec_())
+# if __name__ == "__main__":
+#     app = QtWidgets.QApplication(sys.argv)
+#     # ex = App()
+#     # gameLoop = AThread(ex.graphicsView)
+#     gameLoop.start()
+#     sys.exit(app.exec_())

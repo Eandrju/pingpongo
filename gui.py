@@ -44,7 +44,6 @@ class Window(QtWidgets.QMainWindow):
         self.show()
 
 
-
     @QtCore.pyqtSlot()
     def changep1(self):
         self.p1Score.setPlainText(str(self.graphicsView.score[0]))
@@ -52,6 +51,8 @@ class Window(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def changep2(self):
         self.p2Score.setPlainText(str(self.graphicsView.score[1]))
+
+
 
     def startclicked(self):
         if self.connected:

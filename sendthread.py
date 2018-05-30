@@ -28,7 +28,6 @@ class SendThread(QtCore.QThread):
 
     def clientfunc(self):
         x = self.conn.recv(1024)
-        #print("Recieved")
         if '[' in x.decode():
             self.data = ast.literal_eval(x.decode())
             self.updateElements.disconnect()
@@ -36,9 +35,7 @@ class SendThread(QtCore.QThread):
             self.updateElements.emit()
         self.data = None
         send_data = [list(self.scene.myRacket.position), list(self.scene.myRacket.velocity)]
-        #print("-----------------------------",send_data)
         self.conn.send(str(send_data).encode())
-        #print("Sent")
 
     def serverfunc(self):
         send_data = []
@@ -49,7 +46,6 @@ class SendThread(QtCore.QThread):
         send_data.append(list(self.scene.ball.rotationVector))
         data = str(send_data).encode()
         self.conn.send(data)
-        #print("Sent")
         x = self.conn.recv(1024)
         if '[' in x.decode():
             self.data = ast.literal_eval(x.decode())

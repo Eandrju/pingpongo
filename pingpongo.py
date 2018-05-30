@@ -40,6 +40,7 @@ class AThread(QtCore.QThread):
         self.gui = gui
         self.scene = view.graphicsscene
         self.ingame = True
+        self.saving = False
         self.file = open('enough.csv','w')
         self.enemyendscene = EndScreen(self.view.scenesize, view,"Point player one")
         self.myendscene = EndScreen(self.view.scenesize, view,"Point player two")

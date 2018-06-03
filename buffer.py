@@ -208,8 +208,6 @@ class Obstacle(QtWidgets.QGraphicsItem):
         # print('pN[7][2]', pN[7][2])
         # cubeSides.append(self.CubeSide(poly, line1, line2, (pN[1][2] + pN[7][2])/2))
         #
-        # print('chuuuuuuuj' , cubeSides[5].midPoint, np.linalg.norm(cubeSides[5].midPoint))
-        # print('chuuuuuuuj' , cubeSides[4].midPoint, np.linalg.norm(cubeSides[4].midPoint))
         # print()
         # cubeSides[5].draw(qp)
         # print(reversed(sorted([np.linalg.norm(x.midPoint) for x in cubeSides])))
@@ -485,14 +483,14 @@ class Scene(QtWidgets.QGraphicsScene):
     @QtCore.pyqtSlot()
     def updatePaddleNet(self, data):
         if data is None:
-            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+            return
         self.enemyRacket.position = data
 
     @QtCore.pyqtSlot()
     def updatePaddleBall(self, data):
         if data is None:
-            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-        self.enemyRacket.position = data[0]
+            return
+            self.enemyRacket.position = data[0]
         self.ball.velocityVector = data[1]
         self.ball.position = data[2]
         self.ball.rotationVector = data[3]

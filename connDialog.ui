@@ -71,7 +71,7 @@
     <enum>QAbstractScrollArea::AdjustIgnored</enum>
    </property>
    <property name="plainText">
-    <string>127.0.0.1</string>
+    <string>192.168.0.27</string>
    </property>
   </widget>
   <widget class="QRadioButton" name="serverRadio">
@@ -185,7 +185,7 @@
     <enum>QAbstractScrollArea::AdjustIgnored</enum>
    </property>
    <property name="plainText">
-    <string>10010</string>
+    <string>6969</string>
    </property>
   </widget>
  </widget>

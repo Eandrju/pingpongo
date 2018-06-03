@@ -20,8 +20,8 @@ class Window(QtWidgets.QMainWindow):
         self.connButton.clicked.connect(self.setupConn)
         self.testconnButton.clicked.connect(self.establishConn)
 
-        self.ip = socket.gethostname()
-        self.port = 10010
+        self.ip = '192.168.0.27'
+        self.port = 6969
         self.server = False
         self.client = True
         self.conn = None

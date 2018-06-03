@@ -49,7 +49,7 @@ class SendThread(QtCore.QThread):
 
     def serverfunc(self):
         x = self.conn.recv(1024)
-        if 'kafel' in x.decode() or 'kufel' in x.decode():
+        if 'kafel' in x.decode() or 'kufel' in x.decode() or ']][[' in x.decode():
             self.boxprint("Theres some shit leftover{}".format(x.decode()))
             #self.conn.send('kafel'.encode())
 
@@ -68,7 +68,7 @@ class SendThread(QtCore.QThread):
         self.data = None
         send_data = []
         send_data.append(list(self.scene.myRacket.position))
-        send_data.append(list(self.scene.myRacket.velocity))
+        #send_data.append(list(self.scene.myRacket.velocity))
         send_data.append(list(self.scene.ball.velocityVector))
         send_data.append(list(self.scene.ball.position))
         send_data.append(list(self.scene.ball.rotationVector))

@@ -620,26 +620,26 @@ class Scene(QtWidgets.QGraphicsScene):
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
         data[0][0] = - data[0][0]
         data[0][2] = self.endDistance
-        data[3][0] = - data[3][0]
-        data[3][2] = self.endDistance - data[3][2] + self.startDistance
-        data[1][0] = - data[1][0]
         data[2][0] = - data[2][0]
-        data[2][2] = - data[2][2]
-        data[4][0] = - data[4][0]
-        data[5][1] = - data[5][1]
+        data[2][2] = self.endDistance - data[2][2] + self.startDistance
+        #data[1][0] = - data[1][0]
+        data[1][0] = - data[1][0]
+        data[1][2] = - data[1][2]
+        data[3][0] = - data[3][0]
+        data[4][1] = - data[4][1]
         self.enemyRacket.move(np.array(data[0]))
-        self.enemyRacket.velocity = np.array(data[1])
-        self.ball.velocityVector = np.array(data[2])
-        self.ball.position = np.array(data[3])
-        self.ball.rotationVector = np.array(data[4])
-        self.star.move(data[5])
+        #self.enemyRacket.velocity = np.array(data[1])
+        self.ball.velocityVector = np.array(data[1])
+        self.ball.position = np.array(data[2])
+        self.ball.rotationVector = np.array(data[3])
+        self.star.move(data[4])
 
     def run(self):
         self.update()
         self.moveBall()
         self.checkCollision()
-        # if self.connected:
-        self.bot.timeToMakeAMove(self.ball.position)
+        if not self.connected:
+            self.bot.timeToMakeAMove(self.ball.position)
 
     def mouseMoveEvent(self, event):
         if self.moveracket :

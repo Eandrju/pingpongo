@@ -72,6 +72,7 @@ class SendThread(QtCore.QThread):
         send_data.append(list(self.scene.ball.velocityVector))
         send_data.append(list(self.scene.ball.position))
         send_data.append(list(self.scene.ball.rotationVector))
+        send_data.append(list(self.scene.star.position))
         data = str(send_data).encode()
         self.conn.send(data)
 

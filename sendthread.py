@@ -30,7 +30,7 @@ class SendThread(QtCore.QThread):
 
     def clientfunc(self):
         x = self.conn.recv(1024)
-        if 'kafel' in x.decode():
+        if 'kafel' in x.decode() or 'kufel' in x.decode():
             self.boxprint("Theres some shit leftover".format(x.decode()))
             #self.conn.send('kafel'.encode())
         elif '[' in x.decode() and 'kafel' not in x.decode():
@@ -41,9 +41,6 @@ class SendThread(QtCore.QThread):
                 self.updateElements.emit()
             except:
                 self.boxprint("oops")
-
-
-
         else:
             self.boxprint("Something went tragically wrong")
         self.data = None
@@ -52,7 +49,7 @@ class SendThread(QtCore.QThread):
 
     def serverfunc(self):
         x = self.conn.recv(1024)
-        if 'kafel' in x.decode():
+        if 'kafel' in x.decode() or 'kufel' in x.decode():
             self.boxprint("Theres some shit leftover{}".format(x.decode()))
             #self.conn.send('kafel'.encode())
 
@@ -87,20 +84,15 @@ class SendThread(QtCore.QThread):
         self.boxprint("AHHHHHH {}".format(self.sc))
         if not self.sc:
             flag = True
-            if self.client :
-                self.conn.send("kafel-c".encode())
-            else:
-                self.conn.send("kafel-s".encode())
             while flag:
+                self.conn.send("kafel".encode())
                 x = self.conn.recv(1024)
-                if "kafel" in x.decode() :
-                    self.conn.send("kufel".encode())
-                    self.boxprint(x.decode())
-                    flag = False
-                    self.sc = True
-                    self.gui.gameLoop.ingame = True
-                elif "kufel" in x.decode():
-                    self.boxprint(x.decode())
+                if "kafel" == x.decode():
+                    self.conn.send("kafel".encode())
+                    #while flag:
+                        #self.conn.send("kufel".encode())
+                        #x = self.conn.recv(1024)
+                        #if 'kufel' == x.decode():
                     flag = False
                     self.sc = True
                     self.gui.gameLoop.ingame = True

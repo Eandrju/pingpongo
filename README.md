@@ -7,5 +7,6 @@ The game was written in Python using PyQt framework. No 3D package was used in i
  - Python 3.*
  - numpy
  - PyQt5
-
+ 
+## Screenshot
 ![Screenshot](img/Screenshot.png)
